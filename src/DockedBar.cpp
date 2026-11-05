@@ -221,8 +221,14 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         const auto index = static_cast<std::size_t>(LOWORD(wParam)-kFirstWindow);
         if (index < dock.listed.size() && IsWindow(dock.listed[index])) {
           auto chosen = dock.listed[index];
-          if (IsIconic(chosen)) ShowWindow(chosen, SW_RESTORE);
-          SetForegroundWindow(chosen);
+          // Windows 10 taskbar convention: clicking the foreground window
+          // minimizes it; clicking a minimized or background window activates it.
+          if (GetForegroundWindow() == chosen && !IsIconic(chosen)) {
+            ShowWindow(chosen, SW_MINIMIZE);
+          } else {
+            if (IsIconic(chosen)) ShowWindow(chosen, SW_RESTORE);
+            SetForegroundWindow(chosen);
+          }
         }
       }
       return 0;
