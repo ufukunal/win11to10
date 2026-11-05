@@ -53,4 +53,15 @@ if(NOYAPLANET_ENABLE_HKCU_INTEGRATION_TESTS)
     target_compile_options(StartupRoundTripTests PRIVATE /W4 /utf-8 /permissive-)
   endif()
   add_test(NAME StartupHKCURegistryRoundTrip COMMAND StartupRoundTripTests)
+
+  # Read-only, no service mutations: verify SCM enumeration on CI.
+  add_executable(ServiceInventorySmoke tests/ServiceInventorySmoke.cpp
+                 src/ServiceInventory.cpp)
+  target_include_directories(ServiceInventorySmoke PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  target_compile_definitions(ServiceInventorySmoke PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+  target_link_libraries(ServiceInventorySmoke PRIVATE advapi32)
+  if(MSVC)
+    target_compile_options(ServiceInventorySmoke PRIVATE /W4 /utf-8 /permissive-)
+  endif()
+  add_test(NAME ServiceInventoryReadOnly COMMAND ServiceInventorySmoke)
 endif()
