@@ -1,5 +1,7 @@
 #include "StartMenuModel.h"
 #include "TaskbarPreview.h"
+#include "StartupWindow.h"
+#include "StartupManager.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -452,7 +454,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
           case kRefresh: RefreshDashboard(); break;
           case kStartPreview: OpenPreview(hwnd); break;
           case kTaskbarPreview: noya::ShowTaskbarPreview(hwnd); break;
-          case kStartupSettings: OpenBuiltIn(hwnd, L"ms-settings:startupapps"); break;
+          case kStartupSettings: noya::ShowStartupManager(hwnd); break;
           case kVisualSettings: OpenBuiltIn(hwnd, L"SystemPropertiesPerformance.exe"); break;
           case kAboutSystem: OpenBuiltIn(hwnd, L"ms-settings:about"); break;
           default: break;
@@ -498,7 +500,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() ? 0 : 1;
   }
   gBrush = CreateSolidBrush(kBackground);
   if (!gBrush) return 1;
