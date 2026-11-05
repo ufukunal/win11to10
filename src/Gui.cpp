@@ -7,6 +7,7 @@
 #include "InstalledApps.h"
 #include "BootMetrics.h"
 #include "BootHistory.h"
+#include "BootComparison.h"
 #include "StartupInventory.h"
 #include "ServiceInventory.h"
 #include "TrayHost.h"
@@ -21,6 +22,7 @@
 #include <algorithm>
 #include <array>
 #include <filesystem>
+#include <iomanip>
 #include <cwctype>
 #include <sstream>
 #include <string>
@@ -50,6 +52,8 @@ constexpr int kEnableDockMenu = 924;
 constexpr int kDisableDockMenu = 925;
 constexpr int kClassicExplorerMenu = 927;
 constexpr int kServiceInventoryMenu = 926;
+constexpr int kSaveBootBaselineMenu = 928;
+constexpr int kCompareBootsMenu = 929;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
@@ -195,6 +199,71 @@ void ShowBootHistoryReport(HWND owner) {
   MessageBoxW(owner, out.str().c_str(), L"Açılış süresi analizi", MB_OK);
 }
 
+void SaveMeasuredBootBaseline(HWND owner) {
+  const auto history = noya::ReadBootHistory(8);
+  if (history.milliseconds.size() < 3) {
+    MessageBoxW(owner,
+      L"Yeterli geçerli açılış kaydı bulunamadı. En az üç Event 100 kaydı gerekli.",
+      L"Açılış başlangıç ölçümü", MB_OK | MB_ICONINFORMATION);
+    return;
+  }
+  const auto median = noya::CalculateBootStats(history.milliseconds).medianMs;
+  std::wostringstream message;
+  message << L"Son " << history.milliseconds.size() << L" açılış kaydı üzerinden "
+          << L"medyan " << median << L" ms.\r\n\r\n"
+          << L"Bu verileri karşılaştırma başlangıcı olarak kaydetmek istiyor musunuz?\r\n"
+          << L"Daha önceki başlangıç ölçümü varsa üzerine yazılır.\r\n"
+          << L"Windows olay günlükleri değiştirilmez.";
+  if (MessageBoxW(owner, message.str().c_str(), L"Açılış ölçümünü kaydet",
+                  MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES) return;
+  std::wstring error;
+  if (!noya::SaveBootBaseline(history, error)) {
+    MessageBoxW(owner, error.c_str(), L"Ölçüm kaydedilemedi",
+                MB_OK | MB_ICONWARNING);
+    return;
+  }
+  MessageBoxW(owner,
+    L"Başlangıç medyanı kaydedildi. Aynı bilgisayarda ve aynı açılış "
+    L"koşullarında en az üç yeni açılıştan sonra karşılaştırın.",
+    L"Açılış ölçümü", MB_OK | MB_ICONINFORMATION);
+}
+
+void ShowMeasuredBootComparison(HWND owner) {
+  noya::BootBaseline baseline;
+  std::wstring error;
+  if (!noya::LoadBootBaseline(baseline, error)) {
+    MessageBoxW(owner, error.c_str(), L"Açılış karşılaştırması",
+                MB_OK | MB_ICONINFORMATION);
+    return;
+  }
+  const auto history = noya::ReadBootHistory(20);
+  const auto measured = noya::CompareBoots(baseline, history);
+  std::wostringstream out;
+  out << L"Başlangıç dönemi: " << baseline.samples
+      << L" açılış, medyan " << baseline.medianMs << L" ms\r\n"
+      << L"Yeni açılış kayıtları: " << measured.newSamples << L"\r\n\r\n";
+  if (!measured.enoughData) {
+    out << L"Karşılaştırma için başlangıç ölçümünden SONRA "
+           L"en az üç geçerli yeni açılış gerekir.\r\n"
+           L"Henüz hızlanma veya yavaşlama sonucu verilmiyor.";
+  } else {
+    const auto percent = baseline.medianMs == 0 ? 0.0 :
+      100.0 * static_cast<double>(measured.deltaMs) /
+      static_cast<double>(baseline.medianMs);
+    out << L"Yeni medyan: " << measured.afterMedianMs << L" ms\r\n"
+        << L"Fark (sonra - önce): " << measured.deltaMs << L" ms\r\n"
+        << L"Oransal fark: %" << std::fixed << std::setprecision(1)
+        << percent << L"\r\n\r\n"
+        << L"Negatif fark daha kısa kayıtlı açılış anlamına gelir.\r\n"
+        << L"Bu tek başına uygulamanın hızlanma sağladığını kanıtlamaz.";
+  }
+  out << L"\r\n\r\nKarşılaştırmada aynı donanım, güncelleme durumu ve "
+         L"Fast Startup ayarı kullanılmalıdır.";
+  if (!history.warning.empty()) out << L"\r\n" << history.warning;
+  MessageBoxW(owner, out.str().c_str(),
+              L"Windows açılış ölçümlerinin karşılaştırması", MB_OK);
+}
+
 void ShowStartupInventoryReport(HWND owner) {
   const auto report = noya::ScanStartupInventory();
   std::wostringstream out;
@@ -245,6 +314,8 @@ HMENU BuildDashboardMenu() {
     return nullptr;
   }
   AppendMenuW(tools, MF_STRING, kBootHistoryMenu, L"Açılış geçmişini göster");
+  AppendMenuW(tools, MF_STRING, kSaveBootBaselineMenu, L"Açılış başlangıç ölçümünü kaydet");
+  AppendMenuW(tools, MF_STRING, kCompareBootsMenu, L"Önce/sonra açılış sürelerini karşılaştır");
   AppendMenuW(tools, MF_STRING, kStartupInventoryMenu,
               L"Başlangıç kaynaklarını listele");
   AppendMenuW(tools, MF_STRING, kServiceInventoryMenu,
@@ -814,6 +885,8 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
         case kClassicExplorerMenu:
           noya::ShowClassicFileBrowser(hwnd); return 0;
         case kBootHistoryMenu: ShowBootHistoryReport(hwnd); return 0;
+        case kSaveBootBaselineMenu: SaveMeasuredBootBaseline(hwnd); return 0;
+        case kCompareBootsMenu: ShowMeasuredBootComparison(hwnd); return 0;
         case kStartupInventoryMenu: ShowStartupInventoryReport(hwnd); return 0;
         case kServiceInventoryMenu: ShowServiceInventoryReport(hwnd); return 0;
         case kOpenWindowsStartupMenu:
@@ -907,7 +980,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
   }
   // UI smoke test checks real window/control creation and normal teardown
   // without applying settings or opening other apps.
