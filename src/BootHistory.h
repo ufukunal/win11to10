@@ -6,6 +6,7 @@
 namespace noya {
 struct BootHistory {
   std::vector<std::uint64_t> milliseconds; // newest event first
+  std::vector<std::uint64_t> recordIds; // parallel EventRecordID values; 0 if unavailable
   std::wstring warning;
 };
 struct BootStats {
