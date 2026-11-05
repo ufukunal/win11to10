@@ -24,6 +24,11 @@ compatibility with Windows 11 22H2/23H2/24H2 or later builds.
 - [ ] Ctrl+Alt+S opens Start preview while dashboard is running, if available.
 - [ ] Start menu enumerates per-user/common Start Menu links without crashing.
 - [ ] Search matches a shortcut in a nested Start Menu folder.
+- [ ] Pin a listed shortcut to an available tile; click it to launch only that app.
+- [ ] Unpin all four tiles, close/reopen app, confirm empty layout persists.
+- [ ] Verify a default tile layout appears only when no pin configuration exists.
+- [ ] Corrupt the pin config only in a disposable test profile; confirm safe
+      error reporting and no arbitrary command execution.
 - [ ] A click launches the selected app; no app runs automatically during scan.
 - [ ] Taskbar preview lists and activates visible windows without stealing focus
       until a user clicks one; updates time while open.

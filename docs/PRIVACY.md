@@ -10,6 +10,10 @@ on the Windows device when the relevant screen is opened or refreshed:
 - Current user's HKCU Run startup names and commands and the application's
   own backups, if the user explicitly disables a startup entry.
 - Current user and common Start Menu shortcuts to populate the preview.
+- Up to four user-selected pinned Start preview targets, saved locally at
+  `%LOCALAPPDATA%\\NoyaPLANET\\11to10\\start-pins-v1.txt`.
+- At the user's request, recent Windows boot-duration events (up to 8)
+  and names of startup entries in HKCU/HKLM Run and Startup folders.
 - Visible window titles for the taskbar preview.
 - The last Windows Diagnostics-Performance Event 100 boot duration, if the
   Windows Event Log is accessible.
@@ -22,6 +26,10 @@ on the Windows device when the relevant screen is opened or refreshed:
   HKCU\Software\NoyaPLANET\11to10\DisabledStartup and removed from Run.
   The reverse action restores the saved value. This does not affect HKLM,
   other accounts or system services.
+
+Pin/unpin actions update only the per-user local pin configuration file.
+This does not edit Windows' own Start layout. Removing the app does not
+necessarily delete the pin configuration.
 
 ## Network access and telemetry
 The application code in this development branch does **not** contain a

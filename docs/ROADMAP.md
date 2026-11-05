@@ -38,6 +38,9 @@ with optional visual effects disabled and font smoothing preserved.
 - Explicitly on-demand reports, no intrusive background monitoring.
 - Read-only HKCU/HKLM Run + current/common Startup folder inventories.
 - Native Month Calendar popup from NoyaPLANET's own tray icon.
+- User-editable four-tile Start preview pins, stored only under LocalAppData.
+- Original ringed-planet icon generated for unsigned MSIX packaging;
+  visual branding still requires owner approval.
 - Build, package and code metadata version 0.4.0.0.
 - Still missing: full Task Scheduler and packaged app coverage, quantified
   before/after speed improvement and real Windows 11 desktop tests.

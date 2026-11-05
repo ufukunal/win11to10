@@ -11,6 +11,8 @@ The dashboard shows RAM/build details and offers confirmed, reversible effects
 settings. The standalone Start preview launches built-in apps and searches
 installed user/common Start Menu shortcuts. When the dashboard is open,
 Ctrl+Alt+S can open the preview if that global shortcut is available.
+Up to four Start menu preview tiles can be individually pinned and unpinned;
+their targets are persisted per user and only launched on a click.
 The taskbar preview lists and activates real windows on demand, and displays
 a native clock (refreshed only while preview is open). While the dashboard
 is open, a NoyaPLANET-owned tray icon offers a menu for the dashboard and
@@ -38,6 +40,9 @@ native calendar window; it does not replace Windows' taskbar clock.
 - Read-only inventory of HKCU/HKLM Run and current/common Startup folders.
   Scheduled Tasks and packaged-app startup sources are not yet indexed.
 - Native app-only classic calendar from NoyaPLANET's own system tray menu.
+- Persistent, user-editable four-tile Start preview layout saved under
+  `%LOCALAPPDATA%\\NoyaPLANET\\11to10\\start-pins-v1.txt`.
+  This does not modify Windows' built-in Start menu or pinned items.
 - Windows Folder Options opens using supported Windows controls. A classic
   Windows 10 Explorer ribbon is **not** recreated.
 - Windows x64 CI with tests; unsigned binaries are not distributed as releases.
@@ -136,3 +141,11 @@ Run the graphical dashboard and use **Sistem araçları** to view the
 multi-boot history or registered startup sources. Use the NoyaPLANET tray
 icon to open the separate native calendar. These are local, user-triggered
 features, not system replacements.
+
+## Major remaining work tracked in GitHub
+
+- [Windows 10 shell integration and Explorer fallback](https://github.com/ufukunal/win11to10/issues/2)
+- [Measured performance and safe startup coverage](https://github.com/ufukunal/win11to10/issues/3)
+- [Real Windows 11 QA, Store approval and trusted signing](https://github.com/ufukunal/win11to10/issues/4)
+
+**A passing GitHub Actions build is not Windows 11 desktop validation or Store approval.**

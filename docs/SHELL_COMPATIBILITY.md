@@ -6,10 +6,13 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
 ## Implemented, but not a native shell replacement
 
 - The on-demand Start preview searches installed Start Menu shortcuts and
-  launches selected applications. Optional Ctrl+Alt+S works only while the
+  launches selected applications. It supports four editable pinned tiles,
+  persisted in a per-user config file. It does not change real Start pins. Optional Ctrl+Alt+S works only while the
   native dashboard is running. The Windows key and built-in Start menu remain.
 - The taskbar preview enumerates visible windows and opens selected windows,
   displaying a clock. It does not replace or auto-hide Windows' own taskbar.
+- The NoyaPLANET tray icon also opens an app-owned native calendar popup.
+  Neither the calendar nor its menu replaces Windows' original flyouts.
 - The NoyaPLANET tray icon is the application's own notification-area icon.
   It is added with Shell_NotifyIcon, and is removed on exit. Existing icons
   remain owned by Explorer. No programmatic migration of other apps' icons is
