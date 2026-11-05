@@ -41,6 +41,11 @@ jobs:
           # native invocation operator. Use Start-Process -Wait to obtain ExitCode.
           $gui = Start-Process -FilePath (Resolve-Path ./build/Release/NoyaPLANET11to10.exe) -ArgumentList '--self-test' -PassThru -Wait
           if ($gui.ExitCode -ne 0) { throw "GUI self-test failed: $($gui.ExitCode)" }
+      - name: Exercise native dashboard creation and teardown
+        shell: pwsh
+        run: |
+          $gui = Start-Process -FilePath (Resolve-Path ./build/Release/NoyaPLANET11to10.exe) -ArgumentList '--ui-smoke-test' -PassThru -Wait
+          if ($gui.ExitCode -ne 0) { throw "Native dashboard smoke test failed: $($gui.ExitCode)" }
       - name: Assert that unsigned EXE fails the trusted release gate
         shell: pwsh
         run: |

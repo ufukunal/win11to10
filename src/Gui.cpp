@@ -909,6 +909,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
     return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
   }
+  // UI smoke test checks real window/control creation and normal teardown
+  // without applying settings or opening other apps.
+  const bool uiSmoke = commandLine &&
+      std::wstring_view(commandLine) == L"--ui-smoke-test";
   // One tray icon and one dashboard per user session. No resident service.
   HANDLE mutex = CreateMutexW(nullptr, FALSE,
                               L"Local\\NoyaPLANET11to10-GuiInstanceV1");
@@ -953,8 +957,24 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
     SetMenu(window, menu);
     DrawMenuBar(window);
   }
-  ShowWindow(window, show);
-  UpdateWindow(window);
+  bool uiControlsPresent = true;
+  if (uiSmoke) {
+    uiControlsPresent =
+        IsWindow(gDashboard.title) &&
+        IsWindow(gDashboard.summary) &&
+        IsWindow(gDashboard.effects) &&
+        IsWindow(gDashboard.apply) &&
+        IsWindow(gDashboard.restore) &&
+        IsWindow(gDashboard.preview) &&
+        IsWindow(gDashboard.taskbar) &&
+        IsWindow(gDashboard.startup);
+    // This sends WM_CLOSE through the same path as clicking the X button,
+    // releasing hotkeys, the app-owned tray icon and window brushes.
+    PostMessageW(window, WM_CLOSE, 0, 0);
+  } else {
+    ShowWindow(window, show);
+    UpdateWindow(window);
+  }
 
   MSG msg{};
   while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
@@ -964,5 +984,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
   DeleteObject(gBrush);
   CoUninitialize();
   CloseHandle(mutex);
+  if (uiSmoke && !uiControlsPresent) return 1;
   return static_cast<int>(msg.wParam);
 }
