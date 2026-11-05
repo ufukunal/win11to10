@@ -4,11 +4,13 @@ A Windows 11 to Windows 10 appearance and performance project.
 
 **Store product:** NoyaPLANET 11to10. **Publisher:** NoyaPLANET.
 
-**Status: v0.1 performance foundation — Windows 10 shell is NOT yet implemented.**
+**Status: v0.2 native graphical dashboard + standalone Start/taskbar previews.**
 
-The current native C++ utility measures limited read-only Windows information
-and offers an opt-in, reversible visual-effects performance profile.
-No background process runs continuously, and no service is installed.
+The native C++ utility is now paired with a Turkish Win32 graphical dashboard.
+The dashboard shows RAM/build details and offers confirmed, reversible effects
+settings. A standalone Start menu preview supports app search and launching.
+A separate taskbar preview lists and activates real windows on demand.
+No resident background service is installed.
 
 ## Already implemented
 - On-demand memory load, available RAM, system uptime, Windows build number.
@@ -20,9 +22,9 @@ No background process runs continuously, and no service is installed.
 - Restore from the saved original settings, with rollback attempts on failures.
 - Windows x64 CI with tests; unsigned binaries are not distributed as releases.
 
-**Not yet implemented:** Windows 10 Start menu, taskbar, system tray, Explorer,
-startup program controls, background-service management, measured boot time,
-GUI or one-click installer. Some visual flags may be ignored by Windows 11.
+**Not yet implemented:** Windows 10 system-integrated Start menu and taskbar,
+system tray, Explorer customization, startup app modification, measured boot
+time, full Store-ready polish or a signed installer. Some visual flags may be ignored by Windows 11.
 System uptime is NOT a measure of boot duration.
 
 ## Smart App Control protection
@@ -47,6 +49,11 @@ Old artifact downloads are unsigned and remain blocked by Smart App Control.
 See the trusted distribution guide for Microsoft Store signing steps.
 When an approved, signed Store version exists, it can be installed directly
 through Microsoft Store without Visual Studio.
+
+## Developer binaries
+The build outputs `NoyaPLANET11to10.exe` (native Turkish GUI) and
+`Win11To10.exe` (on-demand settings helper). Both are packed into the MSIX;
+the GUI is the package entry point. Previews do not replace Windows Explorer.
 
 ## Commands
 Open PowerShell in the EXE folder. Run as a standard user.
