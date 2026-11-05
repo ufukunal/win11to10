@@ -4,6 +4,7 @@
 #include "StartupManager.h"
 #include "InstalledApps.h"
 #include "BootMetrics.h"
+#include "TrayHost.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -78,6 +79,8 @@ struct StartPreview {
 Dashboard gDashboard;
 StartPreview gPreview;
 HBRUSH gBrush{};
+UINT gTaskbarCreatedMessage = 0;
+bool gTrayIconAdded = false;
 
 HFONT MakeFont(int size, bool bold) {
   return CreateFontW(size, 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL,
@@ -432,6 +435,10 @@ void OpenPreview(HWND owner) {
 
 LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
                                WPARAM wParam, LPARAM lParam) {
+  if (gTaskbarCreatedMessage != 0 && message == gTaskbarCreatedMessage) {
+    gTrayIconAdded = noya::AddOwnTrayIcon(hwnd);
+    return 0;
+  }
   switch (message) {
     case WM_CREATE: {
       gDashboard.window = hwnd;
@@ -471,6 +478,8 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       RefreshDashboard();
       gStartHotkey = RegisterHotKey(hwnd, kStartHotkey,
                                    MOD_CONTROL | MOD_ALT, 'S') != FALSE;
+      gTaskbarCreatedMessage = RegisterWindowMessageW(L"TaskbarCreated");
+      gTrayIconAdded = noya::AddOwnTrayIcon(hwnd);
       LayoutDashboard(hwnd);
       return 0;
     }
@@ -482,7 +491,31 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       data->ptMinTrackSize = POINT{690, 690};
       return 0;
     }
+    case noya::kTrayCallbackMessage:
+      switch (LOWORD(lParam)) {
+        case WM_CONTEXTMENU:
+        case WM_RBUTTONUP:
+          noya::ShowOwnTrayMenu(hwnd);
+          break;
+        case WM_LBUTTONDBLCLK:
+        case NIN_SELECT:
+          ShowWindow(hwnd, SW_SHOW);
+          SetForegroundWindow(hwnd);
+          break;
+        default: break;
+      }
+      return 0;
     case WM_COMMAND:
+      switch (LOWORD(wParam)) {
+        case noya::kTrayShowDashboard:
+          ShowWindow(hwnd, SW_RESTORE);
+          SetForegroundWindow(hwnd);
+          return 0;
+        case noya::kTrayOpenStart: OpenPreview(hwnd); return 0;
+        case noya::kTrayOpenTaskbar: noya::ShowTaskbarPreview(hwnd); return 0;
+        case noya::kTrayExit: PostMessageW(hwnd, WM_CLOSE, 0, 0); return 0;
+        default: break;
+      }
       if (HIWORD(wParam) == BN_CLICKED) {
         switch (LOWORD(wParam)) {
           case kApply: ConfirmAndRun(hwnd, false); break;
@@ -523,6 +556,10 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       DestroyWindow(hwnd);
       return 0;
     case WM_DESTROY:
+      if (gTrayIconAdded) {
+        noya::RemoveOwnTrayIcon(hwnd);
+        gTrayIconAdded = false;
+      }
       if (gStartHotkey) {
         UnregisterHotKey(hwnd, kStartHotkey);
         gStartHotkey = false;
