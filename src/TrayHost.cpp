@@ -41,6 +41,7 @@ void ShowOwnTrayMenu(HWND owner) {
   AppendMenuW(menu, MF_STRING, kTrayShowDashboard, L"Kontrol panelini göster");
   AppendMenuW(menu, MF_STRING, kTrayOpenStart, L"Başlat önizlemesini aç");
   AppendMenuW(menu, MF_STRING, kTrayOpenTaskbar, L"Görev çubuğu önizlemesi");
+  AppendMenuW(menu, MF_STRING, kTrayCalendar, L"Klasik takvimi aç");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(menu, MF_STRING, kTrayExit, L"Uygulamadan çık");
   POINT cursor{};

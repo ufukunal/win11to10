@@ -9,6 +9,7 @@ inline constexpr UINT kTrayShowDashboard = 710;
 inline constexpr UINT kTrayOpenStart = 711;
 inline constexpr UINT kTrayOpenTaskbar = 712;
 inline constexpr UINT kTrayExit = 713;
+inline constexpr UINT kTrayCalendar = 714;
 
 bool AddOwnTrayIcon(HWND owner);
 void RemoveOwnTrayIcon(HWND owner);

@@ -7,6 +7,7 @@
 #include "BootHistory.h"
 #include "StartupInventory.h"
 #include "TrayHost.h"
+#include "ClassicCalendar.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -599,6 +600,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
           return 0;
         case noya::kTrayOpenStart: OpenPreview(hwnd); return 0;
         case noya::kTrayOpenTaskbar: noya::ShowTaskbarPreview(hwnd); return 0;
+        case noya::kTrayCalendar: noya::ShowClassicCalendar(hwnd); return 0;
         case noya::kTrayExit: PostMessageW(hwnd, WM_CLOSE, 0, 0); return 0;
         default: break;
       }
@@ -675,7 +677,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() ? 0 : 1;
   }
   const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
   if (FAILED(com)) return 1;
