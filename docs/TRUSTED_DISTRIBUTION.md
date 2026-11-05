@@ -29,34 +29,35 @@ PowerShell execution-policy tricks to install these development builds.
 Older historical workflow runs and their unsigned artifacts may remain on
 GitHub until deleted or expired. Do not use those artifacts.
 
-## Path A: Microsoft Store MSIX (recommended; Store signs after approval)
+## Path A: NoyaPLANET 11to10 on Microsoft Store
 
-Microsoft Store signs an approved MSIX automatically. You do not need to
-purchase a code signing certificate for this publishing route.
+The owner registered this public package identity in Partner Center:
 
-Owner action is required (these steps cannot be completed by CI alone):
+- Package/Identity/Name: NoyaPLANET.NoyaPLANET11to10
+- Package/Identity/Publisher: CN=B8F538D8-3B22-4726-BFFE-72791FFA184C
+- Package/Properties/PublisherDisplayName: NoyaPLANET
+- Application display name: NoyaPLANET 11to10
 
-1. Open https://storedeveloper.microsoft.com/ and sign into a developer
-   account; reserve Win11To10 as the Store app name.
-2. Obtain the exact package Identity Name and package Publisher from
-   Partner Center's app identity details.
-3. In GitHub repository Settings > Secrets and variables > Actions >
-   Variables, set:
-   * WIN11TO10_STORE_IDENTITY = exact Partner Center identity name
-   * WIN11TO10_STORE_PUBLISHER = exact Partner Center publisher DN
-4. AFTER the CI changes are merged to main, open Actions and manually run
-   "Prepare unsigned MSIX for Partner Center (MANUAL ONLY)".
-   Enter the exact acknowledgement STORE_SUBMISSION_ONLY_NOT_FOR_INSTALL.
-5. Download the artifact ONLY for submitting it to Partner Center, not for
-   double-click installation. Replace placeholder artwork and complete
-   publishing requirements first. Our v0.1 CLI is only a prototype and
-   may not meet Microsoft Store certification or customer experience rules.
-6. Submit the MSIX from Partner Center for Store review. If approved,
-   install and update the MICROSOFT-SIGNED package through Microsoft Store.
-   Store certification is not guaranteed.
+The identical values are committed in packaging/store-identity.json and
+used automatically when generating the MSIX manifest. CI opens the resulting
+MSIX file and checks the embedded manifest field-by-field. These identifiers
+are NOT credentials, passwords or signing private keys; GitHub variables
+are no longer necessary for these fields.
 
-A signed Store MSIX does NOT make an unrelated separately downloaded GitHub
-EXE or older MSIX trusted.
+Next steps for the owner:
+1. Complete any remaining Microsoft Partner Center account verification.
+2. Finish an interactive Store-quality application, metadata, screenshots
+   and app branding. v0.1 is a CLI prototype, not suitable for submission.
+3. After code review and merging to main, manually run the
+   "Prepare unsigned MSIX for Partner Center (MANUAL ONLY)" GitHub workflow.
+4. Enter the required acknowledgement: STORE_SUBMISSION_ONLY_NOT_FOR_INSTALL.
+5. Upload the resulting UNSIGNED MSIX to Partner Center for certification,
+   never attempt local installation of that unsigned artifact.
+6. If Microsoft approves and publishes the app, install it from Store,
+   which will provide a Microsoft-trusted package signature.
+
+Store approval is not automatic. A correct package identity does not by
+itself resolve Windows Smart App Control or error 0x800B010A.
 
 ## Path B: Direct EXE release from GitHub
 
