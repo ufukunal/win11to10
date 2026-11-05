@@ -18,8 +18,8 @@ constexpr int kRefresh = 611;
 constexpr int kClose = 612;
 constexpr int kFirstWindow = 620;
 constexpr int kMaxWindows = 6;
-constexpr int kHeight = 54;
-constexpr COLORREF kBackground = RGB(22, 35, 56);
+constexpr int kHeight = 44;
+constexpr COLORREF kBackground = RGB(32, 32, 32);
 
 struct Dock {
   HWND hwnd{};
@@ -109,8 +109,8 @@ void PlaceChildren() {
   GetClientRect(dock.hwnd, &rect);
   const int width = std::max(static_cast<int>(rect.right), 360);
   const int margin = 6;
-  MoveWindow(dock.start, margin, 8, 88, 36, TRUE);
-  MoveWindow(dock.refresh, 100, 8, 64, 36, TRUE);
+  MoveWindow(dock.start, margin, 5, 88, 34, TRUE);
+  MoveWindow(dock.refresh, 100, 5, 64, 34, TRUE);
   const int clockWidth = 119;
   const int closeWidth = 60;
   const int left = 170;
@@ -120,11 +120,11 @@ void PlaceChildren() {
   const int buttonWidth = std::max(32, (space - (kMaxWindows - 1)*gap) / kMaxWindows);
   for (int i = 0; i < kMaxWindows; ++i) {
     MoveWindow(dock.apps[static_cast<std::size_t>(i)],
-        left + i*(buttonWidth + gap), 8, buttonWidth, 36, TRUE);
+        left + i*(buttonWidth + gap), 5, buttonWidth, 34, TRUE);
   }
-  MoveWindow(dock.clock, width - clockWidth - closeWidth - 12, 10,
-             clockWidth, 33, TRUE);
-  MoveWindow(dock.close, width - closeWidth - 6, 8, closeWidth, 36, TRUE);
+  MoveWindow(dock.clock, width - clockWidth - closeWidth - 12, 5,
+             clockWidth, 34, TRUE);
+  MoveWindow(dock.close, width - closeWidth - 6, 5, closeWidth, 34, TRUE);
 }
 
 bool Position() {
