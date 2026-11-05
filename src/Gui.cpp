@@ -629,14 +629,27 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
     }
     case WM_CONTEXTMENU: {
       if (reinterpret_cast<HWND>(wParam) != gPreview.appList) break;
-      const LRESULT selected = SendMessageW(gPreview.appList, LB_GETCURSEL, 0, 0);
-      if (selected == LB_ERR) return 0;
       POINT at{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
       if (lParam == -1) {
         RECT list{};
         GetWindowRect(gPreview.appList, &list);
         at = POINT{list.left + 20, list.top + 20};
+      } else {
+        POINT hit = at;
+        ScreenToClient(gPreview.appList, &hit);
+        const LRESULT item = SendMessageW(gPreview.appList,
+                                          LB_ITEMFROMPOINT, 0,
+                                          MAKELPARAM(hit.x, hit.y));
+        // Right-click selects the actual item under the pointer.
+        if (HIWORD(item) == 0 &&
+            static_cast<std::size_t>(LOWORD(item)) < gPreview.visible.size()) {
+          SendMessageW(gPreview.appList, LB_SETCURSEL, LOWORD(item), 0);
+        } else {
+          return 0;
+        }
       }
+      const LRESULT selected = SendMessageW(gPreview.appList, LB_GETCURSEL, 0, 0);
+      if (selected == LB_ERR) return 0;
       HMENU menu = CreatePopupMenu();
       if (!menu) return 0;
       AppendMenuW(menu, MF_STRING, 1, L"Uygulamayı aç");
