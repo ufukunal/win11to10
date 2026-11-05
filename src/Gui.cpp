@@ -18,6 +18,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <shellapi.h>
+#include <commctrl.h>
 #include <objbase.h>
 
 #include <algorithm>
@@ -549,6 +550,41 @@ void ChangePinnedSelection(bool pin) {
   UpdatePinnedTiles();
 }
 
+// Win10-like keyboard search: Enter launches the highlighted result,
+// Down moves to the list, Escape closes Start. Never auto-launch on typing.
+LRESULT CALLBACK PreviewSearchSubclass(
+    HWND control, UINT message, WPARAM wParam, LPARAM lParam,
+    UINT_PTR subclassId, DWORD_PTR) {
+  if (message == WM_KEYDOWN) {
+    if (wParam == VK_ESCAPE) {
+      if (IsWindow(gPreview.window))
+        PostMessageW(gPreview.window, WM_CLOSE, 0, 0);
+      return 0;
+    }
+    if (wParam == VK_DOWN) {
+      if (IsWindow(gPreview.appList) &&
+          SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) > 0) {
+        SendMessageW(gPreview.appList, LB_SETCURSEL, 0, 0);
+        SetFocus(gPreview.appList);
+      }
+      return 0;
+    }
+    if (wParam == VK_RETURN) {
+      if (IsWindow(gPreview.appList) && !gPreview.visible.empty()) {
+        const LRESULT chosen = SendMessageW(gPreview.appList, LB_GETCURSEL, 0, 0);
+        const std::size_t row = chosen == LB_ERR ? 0 :
+                                static_cast<std::size_t>(chosen);
+        if (row < gPreview.visible.size())
+          LaunchPreviewIndex(gPreview.window, gPreview.visible[row]);
+      }
+      return 0;
+    }
+  }
+  if (message == WM_NCDESTROY)
+    RemoveWindowSubclass(control, PreviewSearchSubclass, subclassId);
+  return DefSubclassProc(control, message, wParam, lParam);
+}
+
 void FilterApps() {
   if (!gPreview.appList || !gPreview.search) return;
   const int length = GetWindowTextLengthW(gPreview.search);
@@ -570,6 +606,8 @@ void FilterApps() {
     SendMessageW(gPreview.appList, LB_ADDSTRING, 0,
                  reinterpret_cast<LPARAM>(gPreview.allApps[i].title.c_str()));
   }
+  if (!gPreview.visible.empty())
+    SendMessageW(gPreview.appList, LB_SETCURSEL, 0, 0);
 }
 
 // Cache the on-demand Shell application scan for subsequent Start openings.
@@ -647,6 +685,7 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
                          GetModuleHandleW(nullptr), nullptr);
       SendMessageW(gPreview.search, WM_SETFONT,
                    reinterpret_cast<WPARAM>(gPreview.bodyFont), TRUE);
+      SetWindowSubclass(gPreview.search, PreviewSearchSubclass, 1, 0);
       gPreview.appList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
                          WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
                          LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_WANTKEYBOARDINPUT,
