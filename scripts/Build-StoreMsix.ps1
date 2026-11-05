@@ -2,6 +2,7 @@
 # Microsoft signs approved Store packages; this is NOT safe to sideload.
 param(
   [Parameter(Mandatory)][string]$ExePath,
+  [Parameter(Mandatory)][string]$AuxiliaryExecutable,
   [string]$IdentityFile = "",
   [string]$OutputDirectory = "dist"
 )
@@ -29,6 +30,7 @@ foreach ($part in $Version.Split('.')) {
   if ([int]$part -gt 65535) { throw "Store version component too large." }
 }
 $exe = (Resolve-Path -LiteralPath $ExePath).Path
+$auxiliaryExe = (Resolve-Path -LiteralPath $AuxiliaryExecutable).Path
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $outDir = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("Win11To10-" + [guid]::NewGuid().ToString("N"))
@@ -56,7 +58,8 @@ function Write-PlaceholderIcon([int]$size, [string]$path) {
 
 try {
   Add-Type -AssemblyName System.Drawing
-  Copy-Item -LiteralPath $exe -Destination (Join-Path $stage "Win11To10.exe")
+  Copy-Item -LiteralPath $exe -Destination (Join-Path $stage "NoyaPLANET11to10.exe")
+  Copy-Item -LiteralPath $auxiliaryExe -Destination (Join-Path $stage "Win11To10.exe")
   Write-PlaceholderIcon 44 (Join-Path $stage "Assets\Square44.png")
   Write-PlaceholderIcon 150 (Join-Path $stage "Assets\Square150.png")
   Write-PlaceholderIcon 50 (Join-Path $stage "Assets\StoreLogo.png")
@@ -84,9 +87,9 @@ try {
   </Dependencies>
   <Resources><Resource Language="en-US"/></Resources>
   <Applications>
-    <Application Id="App" Executable="Win11To10.exe"
+    <Application Id="App" Executable="NoyaPLANET11to10.exe"
       uap10:RuntimeBehavior="packagedClassicApp" uap10:TrustLevel="mediumIL">
-      <uap:VisualElements DisplayName="$displayXml" Description="Windows 11 performance"
+      <uap:VisualElements DisplayName="$displayXml" Description="Windows 10 appearance and performance panel"
         BackgroundColor="#182B4A" Square150x150Logo="Assets\Square150.png"
         Square44x44Logo="Assets\Square44.png"/>
     </Application>
