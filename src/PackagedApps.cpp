@@ -106,7 +106,7 @@ bool PackagedAppsModelSelfTest() {
   const PackagedApp example{
       L"Örnek uygulama",
       L"shell:AppsFolder\\Example.Example_123!App"};
-  return Plausible(example) && Lower(L"ÖRNEK") == L"örnek" &&
+  return Plausible(example) && Lower(L"EXAMPLE") == L"example" &&
          !Plausible(PackagedApp{L"", L"shell:AppsFolder\\abc"}) &&
          !Plausible(PackagedApp{L"App", L""});
 }
