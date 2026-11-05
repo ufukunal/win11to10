@@ -1,0 +1,61 @@
+name: Prepare unsigned MSIX for Partner Center (MANUAL ONLY)
+on:
+  workflow_dispatch:
+    inputs:
+      acknowledgement:
+        description: Type STORE_SUBMISSION_ONLY_NOT_FOR_INSTALL
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  prepare-store-submission:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm actual reserved Partner Center identity and manual acknowledgement
+        shell: pwsh
+        env:
+          CONFIRMATION: ${{ inputs.acknowledgement }}
+        run: |
+          if ($env:CONFIRMATION -cne "STORE_SUBMISSION_ONLY_NOT_FOR_INSTALL") { throw "Not acknowledged." }
+          $identity = Get-Content -LiteralPath ./packaging/store-identity.json -Raw | ConvertFrom-Json
+          if ($identity.identityName -cne "NoyaPLANET.NoyaPLANET11to10") { throw "Unrecognized package name." }
+          if ($identity.publisher -cne "CN=B8F538D8-3B22-4726-BFFE-72791FFA184C") { throw "Unrecognized publisher." }
+          Write-Host 'Reserved Partner Center identity validated.'
+      - name: Compile Windows x64
+        run: |
+          cmake -S . -B build -A x64
+          cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Build unsigned MSIX for Store submission only
+        shell: pwsh
+        run: ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/NoyaPLANET11to10.exe -AuxiliaryExecutable ./build/Release/Win11To10.exe -OutputDirectory dist
+      - name: Check manifest matches Partner Center registered identity
+        shell: pwsh
+        run: ./scripts/Test-StoreMsixIdentity.ps1 -Path ./dist/Win11To10-Store-UNSIGNED-x64.msix
+      - name: Ensure unsigned candidate is rejected by trusted signature gate
+        shell: pwsh
+        run: ./scripts/Test-TrustedSignature.ps1 -Path ./dist/Win11To10-Store-UNSIGNED-x64.msix -ExpectUntrusted
+      - name: Add prominent submission-only warning to artifact
+        shell: pwsh
+        run: |
+          @(
+            "NOT INSTALLABLE / NOT TRUSTED / DO NOT SIDELOAD",
+            "This MSIX is unsigned and is ONLY intended for upload to Partner Center.",
+            "It will report an invalid/missing certificate (including 0x800B010A).",
+            "Microsoft Store signing happens AFTER approval of the submission.",
+            "Do not disable Smart App Control or import a test certificate."
+          ) | Set-Content -Path dist/DO_NOT_INSTALL.txt -Encoding UTF8
+      - name: Upload submission files (NOT FOR INSTALLATION)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PARTNER_CENTER_UPLOAD_ONLY__UNSIGNED__DO_NOT_INSTALL
+          path: |
+            dist/Win11To10-Store-UNSIGNED-x64.msix
+            dist/Win11To10-Store-UNSIGNED-x64.msix.sha256
+            dist/DO_NOT_INSTALL.txt
+          retention-days: 1
+          if-no-files-found: error

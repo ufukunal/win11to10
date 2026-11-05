@@ -1,0 +1,62 @@
+name: Windows x64 CI (NOT A RELEASE)
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-security-tests:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure x64
+        run: cmake -S . -B build -A x64 -DNOYAPLANET_ENABLE_HKCU_INTEGRATION_TESTS=ON
+      - name: Compile
+        run: cmake --build build --config Release --parallel
+      - name: Verify native GUI version metadata
+        shell: pwsh
+        run: |
+          $info = (Get-Item ./build/Release/NoyaPLANET11to10.exe).VersionInfo
+          if ($info.ProductName -ne "NoyaPLANET 11to10") { throw "Unexpected product identity in Windows metadata." }
+          if ($info.ProductVersion -ne "0.6.0.0") { throw "Unexpected product version in Windows metadata." }
+      - name: Unit tests
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Read-only smoke checks
+        shell: pwsh
+        run: |
+          ./build/Release/Win11To10.exe analyze
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./build/Release/Win11To10.exe status
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Confirm GUI binary exists and Start menu model passes
+        shell: pwsh
+        run: |
+          if (-not (Test-Path ./build/Release/NoyaPLANET11to10.exe)) { throw "GUI executable missing." }
+          # GUI-subsystem processes are not synchronously awaited by PowerShell's
+          # native invocation operator. Use Start-Process -Wait to obtain ExitCode.
+          $gui = Start-Process -FilePath (Resolve-Path ./build/Release/NoyaPLANET11to10.exe) -ArgumentList '--self-test' -PassThru -Wait
+          if ($gui.ExitCode -ne 0) { throw "GUI self-test failed: $($gui.ExitCode)" }
+      - name: Exercise native dashboard creation and teardown
+        shell: pwsh
+        run: |
+          $gui = Start-Process -FilePath (Resolve-Path ./build/Release/NoyaPLANET11to10.exe) -ArgumentList '--ui-smoke-test' -PassThru -Wait
+          if ($gui.ExitCode -ne 0) { throw "Native dashboard smoke test failed: $($gui.ExitCode)" }
+      - name: Assert that unsigned EXE fails the trusted release gate
+        shell: pwsh
+        run: |
+          ./scripts/Test-TrustedSignature.ps1 -Path ./build/Release/Win11To10.exe -ExpectUntrusted
+          ./scripts/Test-TrustedSignature.ps1 -Path ./build/Release/NoyaPLANET11to10.exe -ExpectUntrusted
+      - name: Validate Store MSIX generation (CI only, not published)
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP "msix-ci"
+          ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/NoyaPLANET11to10.exe -AuxiliaryExecutable ./build/Release/Win11To10.exe -OutputDirectory $output
+          ./scripts/Test-StoreMsixIdentity.ps1 -Path (Join-Path $output "Win11To10-Store-UNSIGNED-x64.msix")
+          ./scripts/Test-TrustedSignature.ps1 -Path (Join-Path $output "Win11To10-Store-UNSIGNED-x64.msix") -ExpectUntrusted
+      # SECURITY: No EXE or MSIX upload. Unsigned CI binaries must not be
+      # mistaken for releases or used to bypass Smart App Control.
