@@ -60,6 +60,7 @@ constexpr int kSearch = 201;
 constexpr int kAppList = 202;
 constexpr int kPinSelected = 203;
 constexpr int kUnpinSelected = 204;
+constexpr int kRefreshInstalledApps = 205;
 constexpr int kTileBase = 300;
 
 struct Dashboard {
@@ -94,6 +95,7 @@ struct StartPreview {
   HWND appList{};
   HWND pinButton{};
   HWND unpinButton{};
+  HWND rescanButton{};
   HWND tilesLabel{};
   HWND tiles[4]{};
   HWND taskbarNote{};
@@ -105,6 +107,8 @@ struct StartPreview {
 };
 Dashboard gDashboard;
 StartPreview gPreview;
+std::vector<PreviewItem> gCachedStartApps;
+bool gCachedStartAppsReady = false;
 HBRUSH gBrush{};
 UINT gTaskbarCreatedMessage = 0;
 bool gTrayIconAdded = false;
@@ -568,6 +572,32 @@ void FilterApps() {
   }
 }
 
+// Cache the on-demand Shell application scan for subsequent Start openings.
+// Explicit refresh invalidates it; no idle CPU, service or background indexer.
+void RefreshStartIndex(bool force) {
+  if (force || !gCachedStartAppsReady) {
+    std::vector<PreviewItem> entries;
+    for (const auto& builtIn : noya::BuiltInApps())
+      entries.push_back(PreviewItem{std::wstring(builtIn.title),
+                                     std::wstring(builtIn.command)});
+    for (auto& installed : noya::ScanInstalledApps())
+      entries.push_back(PreviewItem{std::move(installed.title),
+                                    std::move(installed.shortcut)});
+    for (auto& packaged : noya::ScanAppsFolder()) {
+      const auto duplicate = std::find_if(entries.begin(), entries.end(),
+          [&](const PreviewItem& item) { return item.title == packaged.title; });
+      if (duplicate == entries.end())
+        entries.push_back(PreviewItem{std::move(packaged.title),
+                          std::move(packaged.parsingName), true});
+    }
+    gCachedStartApps = std::move(entries);
+    gCachedStartAppsReady = true;
+  }
+  gPreview.allApps = gCachedStartApps;
+  UpdatePinnedTiles();
+  FilterApps();
+}
+
 void LayoutPreview(HWND hwnd) {
   RECT client{};
   GetClientRect(hwnd, &client);
@@ -592,6 +622,7 @@ void LayoutPreview(HWND hwnd) {
   Place(gPreview.tiles[1], tileX + half + 10, 151, half, 87);
   Place(gPreview.tiles[2], tileX, 249, half, 87);
   Place(gPreview.tiles[3], tileX + half + 10, 249, half, 87);
+  Place(gPreview.rescanButton, tileX, 348, tileWidth, 38);
   Place(gPreview.taskbarNote, 22, height - 99, usable, 61);
 }
 
@@ -628,6 +659,8 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
                                          kPinSelected, gPreview.bodyFont);
       gPreview.unpinButton = CreateButton(hwnd, L"Sabitlemeyi kaldır",
                                            kUnpinSelected, gPreview.bodyFont);
+      gPreview.rescanButton = CreateButton(hwnd, L"Uygulama listesini yenile",
+                                           kRefreshInstalledApps, gPreview.bodyFont);
       gPreview.tilesLabel = CreateLabel(hwnd, L"Sabitlenmiş uygulamalar",
                                        gPreview.bodyFont);
       constexpr const wchar_t* tiles[]{
@@ -639,23 +672,6 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
           hwnd, L"Görev çubuğu / sistem tepsisi henüz değiştirilmedi.\r\n"
                 L"Başlat kısayolları yalnızca açıldığında taranır.",
           gPreview.bodyFont);
-      for (const auto& builtIn : noya::BuiltInApps())
-        gPreview.allApps.push_back(
-            PreviewItem{std::wstring(builtIn.title), std::wstring(builtIn.command)});
-      for (auto& installed : noya::ScanInstalledApps())
-        gPreview.allApps.push_back(
-            PreviewItem{std::move(installed.title), std::move(installed.shortcut)});
-      // On-demand Shell enumeration also covers Store apps, which do not
-      // necessarily have .lnk shortcuts in the classic Start Menu folders.
-      for (auto& packaged : noya::ScanAppsFolder()) {
-        const auto duplicate = std::find_if(gPreview.allApps.begin(),
-          gPreview.allApps.end(), [&](const PreviewItem& item) {
-            return item.title == packaged.title;
-          });
-        if (duplicate == gPreview.allApps.end())
-          gPreview.allApps.push_back(PreviewItem{
-            std::move(packaged.title), std::move(packaged.parsingName), true});
-      }
       std::wstring pinError;
       bool hadPins = false;
       if (!noya::LoadPinnedTargets(gPreview.pinnedTargets, hadPins, pinError)) {
@@ -669,8 +685,7 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
           gPreview.pinnedTargets.emplace_back(builtIn);
         }
       }
-      UpdatePinnedTiles();
-      FilterApps();
+      RefreshStartIndex(false);
       RECT client{};
       GetClientRect(hwnd, &client);
       LayoutPreview(hwnd);
@@ -691,6 +706,8 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
         ChangePinnedSelection(true);
       } else if (id == kUnpinSelected && HIWORD(wParam) == BN_CLICKED) {
         ChangePinnedSelection(false);
+      } else if (id == kRefreshInstalledApps && HIWORD(wParam) == BN_CLICKED) {
+        RefreshStartIndex(true);
       } else if (id >= kTileBase && id < kTileBase + 4 && HIWORD(wParam) == BN_CLICKED) {
         const auto pinnedIndex = static_cast<std::size_t>(id - kTileBase);
         if (pinnedIndex < gPreview.pinnedTargets.size()) {
