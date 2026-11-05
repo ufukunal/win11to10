@@ -7,6 +7,7 @@
 #include "BootMetrics.h"
 #include "BootHistory.h"
 #include "StartupInventory.h"
+#include "ServiceInventory.h"
 #include "TrayHost.h"
 #include "ClassicCalendar.h"
 #include "PinManager.h"
@@ -46,6 +47,7 @@ constexpr int kOpenWindowsStartupMenu = 922;
 constexpr int kOpenExplorerOptionsMenu = 923;
 constexpr int kEnableDockMenu = 924;
 constexpr int kDisableDockMenu = 925;
+constexpr int kServiceInventoryMenu = 926;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
@@ -215,6 +217,23 @@ void ShowStartupInventoryReport(HWND owner) {
   MessageBoxW(owner, out.str().c_str(), L"Başlangıç envanteri", MB_OK);
 }
 
+void ShowServiceInventoryReport(HWND owner) {
+  const auto result = noya::InspectWindowsServices();
+  std::wostringstream out;
+  out << L"Windows servisleri — salt okunur envanter\r\n"
+      << L"Toplam: " << result.total << L"\r\n"
+      << L"Çalışan: " << result.running << L"\r\n"
+      << L"Çalışmayan: " << result.stopped << L"\r\n\r\n"
+      << L"İlk çalışan servis örnekleri:\r\n";
+  for (const auto& title : result.sampleRunningNames)
+    out << L" - " << title << L"\r\n";
+  if (!result.warning.empty()) out << L"\r\n" << result.warning << L"\r\n";
+  out << L"\r\nÇalışıyor olması gereksiz olduğu anlamına gelmez. "
+         L"Servisler devre dışı bırakılmaz ve değişiklik önerilmez.";
+  MessageBoxW(owner, out.str().c_str(),
+              L"NoyaPLANET — servis incelemesi", MB_OK | MB_ICONINFORMATION);
+}
+
 HMENU BuildDashboardMenu() {
   HMENU root = CreateMenu();
   HMENU tools = CreatePopupMenu();
@@ -226,6 +245,8 @@ HMENU BuildDashboardMenu() {
   AppendMenuW(tools, MF_STRING, kBootHistoryMenu, L"Açılış geçmişini göster");
   AppendMenuW(tools, MF_STRING, kStartupInventoryMenu,
               L"Başlangıç kaynaklarını listele");
+  AppendMenuW(tools, MF_STRING, kServiceInventoryMenu,
+              L"Windows servislerini incele (salt okunur)");
   AppendMenuW(tools, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(tools, MF_STRING, kOpenWindowsStartupMenu,
               L"Windows başlangıç ayarları");
@@ -774,6 +795,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
         case kDisableDockMenu: noya::CloseDockedBar(); return 0;
         case kBootHistoryMenu: ShowBootHistoryReport(hwnd); return 0;
         case kStartupInventoryMenu: ShowStartupInventoryReport(hwnd); return 0;
+        case kServiceInventoryMenu: ShowServiceInventoryReport(hwnd); return 0;
         case kOpenWindowsStartupMenu:
           OpenBuiltIn(hwnd, L"ms-settings:startupapps");
           return 0;
@@ -865,7 +887,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() ? 0 : 1;
   }
   // One tray icon and one dashboard per user session. No resident service.
   HANDLE mutex = CreateMutexW(nullptr, FALSE,
