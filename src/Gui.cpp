@@ -4,6 +4,8 @@
 #include "StartupManager.h"
 #include "InstalledApps.h"
 #include "BootMetrics.h"
+#include "BootHistory.h"
+#include "StartupInventory.h"
 #include "TrayHost.h"
 
 #include <windows.h>
@@ -34,6 +36,10 @@ constexpr int kVisualSettings = 106;
 constexpr int kTaskbarPreview = 107;
 constexpr int kExplorerOptions = 108;
 constexpr int kStartHotkey = 9001;
+constexpr int kBootHistoryMenu = 920;
+constexpr int kStartupInventoryMenu = 921;
+constexpr int kOpenWindowsStartupMenu = 922;
+constexpr int kOpenExplorerOptionsMenu = 923;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
@@ -145,6 +151,77 @@ std::wstring WindowsBuild() {
     return L"bilinmiyor";
   }
   return build;
+}
+
+// Read-only, user-invoked diagnostics; no ongoing background monitoring.
+void ShowBootHistoryReport(HWND owner) {
+  const auto history = noya::ReadBootHistory(8);
+  if (history.milliseconds.empty()) {
+    const std::wstring message = L"Açılış geçmişi okunamadı.\r\n" + history.warning;
+    MessageBoxW(owner, message.c_str(), L"Açılış süresi analizi",
+                MB_OK | MB_ICONINFORMATION);
+    return;
+  }
+  const auto stats = noya::CalculateBootStats(history.milliseconds);
+  std::wostringstream out;
+  out << L"Son " << history.milliseconds.size()
+      << L" kaydedilmiş açılış (Diagnostics-Performance 100)\r\n"
+      << L"En son: " << stats.newestMs << L" ms\r\n"
+      << L"Medyan: " << stats.medianMs << L" ms\r\n"
+      << L"Ortalama: " << stats.meanMs << L" ms\r\n"
+      << L"En kısa: " << stats.minimumMs << L" ms\r\n"
+      << L"En uzun: " << stats.maximumMs << L" ms\r\n\r\n";
+  for (std::size_t i = 0; i < history.milliseconds.size(); ++i) {
+    out << (i + 1) << L". " << history.milliseconds[i] << L" ms\r\n";
+  }
+  out << L"\r\nBu kayıtlar aynı donanımda önce/sonra ölçümü"
+         L" olmadan hızlanma kanıtlamaz.";
+  if (!history.warning.empty()) out << L"\r\n" << history.warning;
+  MessageBoxW(owner, out.str().c_str(), L"Açılış süresi analizi", MB_OK);
+}
+
+void ShowStartupInventoryReport(HWND owner) {
+  const auto report = noya::ScanStartupInventory();
+  std::wostringstream out;
+  out << L"Başlangıç kaynakları (salt okunur)\r\n"
+      << L"Bu liste Windows'un bütün başlangıç görevlerini kapsamaz.\r\n\r\n";
+  const auto append = [&](const wchar_t* title, const auto& names) {
+    out << title << L": " << names.size() << L" aday\r\n";
+    const auto length = std::min<std::size_t>(names.size(), 8);
+    for (std::size_t i = 0; i < length; ++i)
+      out << L" - " << names[i] << L"\r\n";
+    if (names.size() > length)
+      out << L" ... (" << (names.size() - length) << L" diğer)\r\n";
+    out << L"\r\n";
+  };
+  append(L"HKCU Run", report.currentUserRun);
+  append(L"HKLM Run", report.allUsersRun);
+  append(L"Kullanıcı Başlangıç klasörü", report.currentUserShortcuts);
+  append(L"Ortak Başlangıç klasörü", report.allUsersShortcuts);
+  out << L"Kayıtlı olması otomatik çalıştığı anlamına gelmez.\r\n"
+         L"Programları kapatmak için Başlangıç Yöneticisini kullanın.\r\n";
+  if (!report.diagnostics.empty()) out << report.diagnostics;
+  MessageBoxW(owner, out.str().c_str(), L"Başlangıç envanteri", MB_OK);
+}
+
+HMENU BuildDashboardMenu() {
+  HMENU root = CreateMenu();
+  HMENU tools = CreatePopupMenu();
+  if (!root || !tools) {
+    if (tools) DestroyMenu(tools);
+    if (root) DestroyMenu(root);
+    return nullptr;
+  }
+  AppendMenuW(tools, MF_STRING, kBootHistoryMenu, L"Açılış geçmişini göster");
+  AppendMenuW(tools, MF_STRING, kStartupInventoryMenu,
+              L"Başlangıç kaynaklarını listele");
+  AppendMenuW(tools, MF_SEPARATOR, 0, nullptr);
+  AppendMenuW(tools, MF_STRING, kOpenWindowsStartupMenu,
+              L"Windows başlangıç ayarları");
+  AppendMenuW(tools, MF_STRING, kOpenExplorerOptionsMenu,
+              L"Dosya Gezgini seçenekleri");
+  AppendMenuW(root, MF_POPUP, reinterpret_cast<UINT_PTR>(tools), L"Sistem araçları");
+  return root;
 }
 
 void RefreshDashboard(bool readBoot = false) {
@@ -507,6 +584,15 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       return 0;
     case WM_COMMAND:
       switch (LOWORD(wParam)) {
+        case kBootHistoryMenu: ShowBootHistoryReport(hwnd); return 0;
+        case kStartupInventoryMenu: ShowStartupInventoryReport(hwnd); return 0;
+        case kOpenWindowsStartupMenu:
+          OpenBuiltIn(hwnd, L"ms-settings:startupapps");
+          return 0;
+        case kOpenExplorerOptionsMenu:
+          ShellExecuteW(hwnd, L"open", L"control.exe",
+                        L"folders", nullptr, SW_SHOWNORMAL);
+          return 0;
         case noya::kTrayShowDashboard:
           ShowWindow(hwnd, SW_RESTORE);
           SetForegroundWindow(hwnd);
@@ -606,7 +692,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
       860, 735, nullptr, nullptr, instance, nullptr);
   if (!window) {
     DeleteObject(gBrush);
+    CoUninitialize();
     return 1;
+  }
+  if (HMENU menu = BuildDashboardMenu()) {
+    SetMenu(window, menu);
+    DrawMenuBar(window);
   }
   ShowWindow(window, show);
   UpdateWindow(window);
