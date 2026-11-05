@@ -34,6 +34,17 @@ enable_testing()
 add_test(NAME BackupAndProfile COMMAND Win11To10 self-test)
 add_test(NAME GuiStartupModel COMMAND NoyaPLANET11to10 --self-test)
 
+# Read-only modern AppsFolder enumeration and PIDL parsing test.
+# No installed application is launched by this test.
+add_executable(PackagedAppsSmoke tests/PackagedAppsSmoke.cpp src/PackagedApps.cpp)
+target_include_directories(PackagedAppsSmoke PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_compile_definitions(PackagedAppsSmoke PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_libraries(PackagedAppsSmoke PRIVATE shell32 ole32 uuid)
+if(MSVC)
+  target_compile_options(PackagedAppsSmoke PRIVATE /W4 /utf-8 /permissive-)
+endif()
+add_test(NAME WindowsAppsFolderEnumeration COMMAND PackagedAppsSmoke)
+
 add_executable(StartMenuModelTests tests/StartMenuModelTests.cpp)
 target_link_libraries(StartMenuModelTests PRIVATE StartMenuModel)
 if(MSVC)
