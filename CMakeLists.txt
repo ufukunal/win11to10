@@ -17,7 +17,7 @@ target_link_libraries(Win11To10 PRIVATE user32 advapi32)
 
 # Native Win32 graphical dashboard and standalone Start menu preview.
 # No browser, no .NET runtime and no service or Explorer modifications.
-add_library(StartMenuModel STATIC src/StartMenuModel.cpp)
+add_library(StartMenuModel STATIC src/StartMenuModel.cpp src/TurkishSearch.cpp)
 target_include_directories(StartMenuModel PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 add_executable(NoyaPLANET11to10 WIN32 src/Gui.cpp src/TaskbarPreview.cpp src/DockedBar.cpp src/ClassicFileBrowser.cpp src/StartupManager.cpp src/StartupWindow.cpp src/InstalledApps.cpp src/PackagedApps.cpp src/BootMetrics.cpp src/BootHistory.cpp src/BootComparison.cpp src/StartupInventory.cpp src/ServiceInventory.cpp src/PinManager.cpp src/ClassicCalendar.cpp src/TrayHost.cpp resources/AppVersion.rc)

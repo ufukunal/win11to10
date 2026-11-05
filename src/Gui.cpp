@@ -6,6 +6,7 @@
 #include "StartupManager.h"
 #include "InstalledApps.h"
 #include "PackagedApps.h"
+#include "TurkishSearch.h"
 #include "BootMetrics.h"
 #include "BootHistory.h"
 #include "BootComparison.h"
@@ -592,16 +593,10 @@ void FilterApps() {
   GetWindowTextW(gPreview.search, query.data(), length + 1);
   query.resize(static_cast<std::size_t>(length));
 
-  auto lower = [](std::wstring text) {
-    std::transform(text.begin(), text.end(), text.begin(),
-                   [](wchar_t ch) { return static_cast<wchar_t>(std::towlower(ch)); });
-    return text;
-  };
-  const auto needle = lower(query);
   gPreview.visible.clear();
   SendMessageW(gPreview.appList, LB_RESETCONTENT, 0, 0);
   for (std::size_t i = 0; i < gPreview.allApps.size(); ++i) {
-    if (lower(gPreview.allApps[i].title).find(needle) == std::wstring::npos) continue;
+    if (!noya::ContainsTurkish(gPreview.allApps[i].title, query)) continue;
     gPreview.visible.push_back(i);
     SendMessageW(gPreview.appList, LB_ADDSTRING, 0,
                  reinterpret_cast<LPARAM>(gPreview.allApps[i].title.c_str()));
