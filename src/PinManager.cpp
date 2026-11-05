@@ -98,7 +98,8 @@ bool IsValidPinnedTarget(std::wstring_view value) {
 }
 
 bool LoadPinnedTargets(std::vector<std::wstring>& targets,
-                       std::wstring& error) {
+                       bool& hadConfiguration, std::wstring& error) {
+  hadConfiguration = false;
   const auto path = PinnedFile();
   if (path.empty()) {
     error = L"LOCALAPPDATA erişilemiyor.";
@@ -108,6 +109,7 @@ bool LoadPinnedTargets(std::vector<std::wstring>& targets,
     targets.clear(); // no file => default preview pins can be used
     return true;
   }
+  hadConfiguration = true;
   std::ifstream in(path, std::ios::binary);
   if (!in) {
     error = L"Sabitlenmiş uygulamalar okunamadı.";

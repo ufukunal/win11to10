@@ -527,12 +527,13 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
         gPreview.allApps.push_back(
             PreviewItem{std::move(installed.title), std::move(installed.shortcut)});
       std::wstring pinError;
-      if (!noya::LoadPinnedTargets(gPreview.pinnedTargets, pinError)) {
+      bool hadPins = false;
+      if (!noya::LoadPinnedTargets(gPreview.pinnedTargets, hadPins, pinError)) {
         MessageBoxW(hwnd, pinError.c_str(), L"Sabitleme ayarları okunamadı",
                     MB_OK | MB_ICONWARNING);
         gPreview.pinnedTargets.clear();
       }
-      if (gPreview.pinnedTargets.empty() && pinError.empty()) {
+      if (!hadPins && pinError.empty()) {
         for (const auto index : {0, 4, 1, 3}) {
           const auto builtIn = noya::BuiltInApps()[index].command;
           gPreview.pinnedTargets.emplace_back(builtIn);
