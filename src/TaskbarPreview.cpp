@@ -4,6 +4,7 @@
 #include <array>
 #include <algorithm>
 #include <string>
+#include <cwchar>
 #include <vector>
 
 namespace noya {
@@ -20,6 +21,7 @@ struct State {
   HWND owner{};
   HWND caption{};
   HWND hint{};
+  HWND clock{};
   HWND start{};
   HWND refresh{};
   std::array<HWND, kMaximumWindows> buttons{};
@@ -92,6 +94,16 @@ void Refresh() {
   SetWindowTextW(gState.hint, note.c_str());
 }
 
+void RefreshClock() {
+  if (!gState.clock) return;
+  SYSTEMTIME now{};
+  GetLocalTime(&now);
+  wchar_t text[64]{};
+  swprintf_s(text, L"%02u:%02u  %02u.%02u.%04u",
+             now.wHour, now.wMinute, now.wDay, now.wMonth, now.wYear);
+  SetWindowTextW(gState.clock, text);
+}
+
 void Layout(HWND hwnd) {
   RECT rect{};
   GetClientRect(hwnd, &rect);
@@ -108,7 +120,8 @@ void Layout(HWND hwnd) {
     MoveWindow(gState.buttons[static_cast<std::size_t>(i)],
                left + i * (cellWidth + gap), 49, cellWidth, 43, TRUE);
   }
-  MoveWindow(gState.hint, 18, 105, std::max(1, width - 36), 26, TRUE);
+  MoveWindow(gState.hint, 18, 105, std::max(1, width - 210), 26, TRUE);
+  MoveWindow(gState.clock, width - 188, 105, 176, 26, TRUE);
 }
 
 LRESULT CALLBACK Procedure(HWND hwnd, UINT message,
@@ -123,16 +136,22 @@ LRESULT CALLBACK Procedure(HWND hwnd, UINT message,
       gState.caption = Caption(hwnd,
           L"Windows 10 görev çubuğu prototipi — gerçek görev çubuğunun yerine geçmez");
       gState.hint = Caption(hwnd, L"Pencereler okunuyor...");
+      gState.clock = Caption(hwnd, L"Saat okunuyor...");
       gState.start = Button(hwnd, L"⊞ Başlat", kStart);
       gState.refresh = Button(hwnd, L"Yenile", kRefresh);
       for (int i = 0; i < kMaximumWindows; ++i)
         gState.buttons[static_cast<std::size_t>(i)] =
             Button(hwnd, L"", kWindowsBase + i);
       Refresh();
+      RefreshClock();
+      SetTimer(hwnd, 1, 60000, nullptr);
       Layout(hwnd);
       return 0;
     case WM_SIZE:
       Layout(hwnd);
+      return 0;
+    case WM_TIMER:
+      if (wParam == 1) RefreshClock();
       return 0;
     case WM_COMMAND:
       if (HIWORD(wParam) == BN_CLICKED) {
@@ -158,6 +177,7 @@ LRESULT CALLBACK Procedure(HWND hwnd, UINT message,
       return reinterpret_cast<INT_PTR>(gState.background);
     }
     case WM_DESTROY:
+      KillTimer(hwnd, 1);
       if (gState.font) DeleteObject(gState.font);
       if (gState.background) DeleteObject(gState.background);
       gState = State{};

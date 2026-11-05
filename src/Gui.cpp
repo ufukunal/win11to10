@@ -31,7 +31,9 @@ constexpr int kStartPreview = 104;
 constexpr int kStartupSettings = 105;
 constexpr int kVisualSettings = 106;
 constexpr int kTaskbarPreview = 107;
-constexpr int kAboutSystem = 108;
+constexpr int kExplorerOptions = 108;
+constexpr int kStartHotkey = 9001;
+bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
 constexpr int kTileBase = 300;
@@ -142,7 +144,7 @@ std::wstring WindowsBuild() {
   return build;
 }
 
-void RefreshDashboard() {
+void RefreshDashboard(bool readBoot = false) {
   MEMORYSTATUSEX memory{};
   memory.dwLength = sizeof(memory);
   std::wostringstream details;
@@ -158,13 +160,17 @@ void RefreshDashboard() {
           << L"  |  Sistem çalışma süresi: "
           << (GetTickCount64() / 60000ULL) << L" dakika"
           << L"\r\nSistem çalışma süresi açılış süresi değildir.";
-  const auto boot = noya::ReadLastBootEvent();
-  if (boot.available) {
-    details << L"\r\nSon kaydedilen açılış: " << (boot.milliseconds / 1000ULL)
-            << L"." << ((boot.milliseconds % 1000ULL) / 100ULL)
-            << L" saniye (Olay 100; güncel açılış olmayabilir).";
+  if (readBoot) {
+    const auto boot = noya::ReadLastBootEvent();
+    if (boot.available) {
+      details << L"\r\nSon kaydedilen açılış: " << (boot.milliseconds / 1000ULL)
+              << L"." << ((boot.milliseconds % 1000ULL) / 100ULL)
+              << L" saniye (Olay 100; güncel açılış olmayabilir).";
+    } else {
+      details << L"\r\nAçılış kaydı: " << boot.diagnostic;
+    }
   } else {
-    details << L"\r\nAçılış kaydı: " << boot.diagnostic;
+    details << L"\r\nAçılış ölçümü için Yenile düğmesine basın.";
   }
   SetWindowTextW(gDashboard.summary, details.str().c_str());
 
@@ -435,7 +441,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
                                      gDashboard.titleFont);
       gDashboard.subtitle = CreateLabel(
           hwnd, L"Türkçe kontrol paneli  •  v0.2 arayüz prototipi\r\n"
-                L"Windows 11 altyapısı korunur. Arayüz değişimleri aşamalı geliştiriliyor.",
+                L"Windows 11 altyapısı korunur. Başlat için Ctrl+Alt+S (uygunsa).",
           gDashboard.bodyFont);
       gDashboard.summary = CreateLabel(hwnd, L"Sistem bilgileri okunuyor...",
                                         gDashboard.bodyFont);
@@ -460,9 +466,11 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
                                         kRefresh, gDashboard.bodyFont);
       gDashboard.visualSettings = CreateButton(hwnd, L"Windows görsel efekt ayarları",
                                                kVisualSettings, gDashboard.bodyFont);
-      gDashboard.about = CreateButton(hwnd, L"Windows hakkında",
-                                      kAboutSystem, gDashboard.bodyFont);
+      gDashboard.about = CreateButton(hwnd, L"Dosya Gezgini seçenekleri",
+                                      kExplorerOptions, gDashboard.bodyFont);
       RefreshDashboard();
+      gStartHotkey = RegisterHotKey(hwnd, kStartHotkey,
+                                   MOD_CONTROL | MOD_ALT, 'S') != FALSE;
       LayoutDashboard(hwnd);
       return 0;
     }
@@ -479,12 +487,18 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
         switch (LOWORD(wParam)) {
           case kApply: ConfirmAndRun(hwnd, false); break;
           case kRestore: ConfirmAndRun(hwnd, true); break;
-          case kRefresh: RefreshDashboard(); break;
+          case kRefresh: RefreshDashboard(true); break;
           case kStartPreview: OpenPreview(hwnd); break;
           case kTaskbarPreview: noya::ShowTaskbarPreview(hwnd); break;
           case kStartupSettings: noya::ShowStartupManager(hwnd); break;
           case kVisualSettings: OpenBuiltIn(hwnd, L"SystemPropertiesPerformance.exe"); break;
-          case kAboutSystem: OpenBuiltIn(hwnd, L"ms-settings:about"); break;
+          case kExplorerOptions:
+            if (reinterpret_cast<INT_PTR>(ShellExecuteW(
+                    hwnd, L"open", L"control.exe", L"folders",
+                    nullptr, SW_SHOWNORMAL)) <= 32)
+              MessageBoxW(hwnd, L"Explorer seçenekleri açılamadı.",
+                          L"NoyaPLANET 11to10", MB_ICONWARNING | MB_OK);
+            break;
           default: break;
         }
       }
@@ -498,11 +512,21 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
     case noya::kRequestStartMenuPreview:
       OpenPreview(hwnd);
       return 0;
+    case WM_HOTKEY:
+      if (wParam == kStartHotkey) {
+        OpenPreview(hwnd);
+        return 0;
+      }
+      break;
     case WM_CLOSE:
       if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
       DestroyWindow(hwnd);
       return 0;
     case WM_DESTROY:
+      if (gStartHotkey) {
+        UnregisterHotKey(hwnd, kStartHotkey);
+        gStartHotkey = false;
+      }
       if (gDashboard.bodyFont) DeleteObject(gDashboard.bodyFont);
       if (gDashboard.titleFont) DeleteObject(gDashboard.titleFont);
       PostQuitMessage(0);
