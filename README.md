@@ -98,10 +98,17 @@ through Microsoft Store without Visual Studio.
 
 ## Windows 11 compatibility and validation
 
-Builds run on GitHub-hosted Windows Server, **not** a representative Windows 11
-desktop. The Windows 11 manual test plan is in
+Automated CI now runs on **Windows Server 2022 x64** and a **real Windows 11
+Enterprise ARM64** runner (build 26200, Visual Studio 2026). The Windows 11
+ARM64 workflow compiles natively, runs five automated tests including
+reversible disposable HKCU registry round-trips, and exercises native GUI
+creation/teardown. The first complete run passed:
+[Windows 11 ARM64 validation](https://github.com/ufukunal/win11to10/actions/runs/42041127070).
+
+This is **not an interactive Windows 11 x64 desktop compatibility test**.
+Windows 11 x64, shell behavior, DPI, multi-monitor, accessibility, performance
+benchmarks and Store installation still require real-user/VM validation. See
 [docs/WINDOWS11_TEST_PLAN.md](docs/WINDOWS11_TEST_PLAN.md).
-Do not claim that a Windows 11 build is supported without testing it.
 The startup registry manager edits HKCU only after explicit confirmation;
 the real effects of packaging and Windows StartupApproved policy still
 require desktop testing.
