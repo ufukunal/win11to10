@@ -27,14 +27,22 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./build/Release/Win11To10.exe status
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Confirm GUI binary exists and Start menu model passes
+        shell: pwsh
+        run: |
+          if (-not (Test-Path ./build/Release/NoyaPLANET11to10.exe)) { throw "GUI executable missing." }
+          ./build/Release/NoyaPLANET11to10.exe --self-test
+          if ($LASTEXITCODE -ne 0) { throw "GUI self-test failed." }
       - name: Assert that unsigned EXE fails the trusted release gate
         shell: pwsh
-        run: ./scripts/Test-TrustedSignature.ps1 -Path ./build/Release/Win11To10.exe -ExpectUntrusted
+        run: |
+          ./scripts/Test-TrustedSignature.ps1 -Path ./build/Release/Win11To10.exe -ExpectUntrusted
+          ./scripts/Test-TrustedSignature.ps1 -Path ./build/Release/NoyaPLANET11to10.exe -ExpectUntrusted
       - name: Validate Store MSIX generation (CI only, not published)
         shell: pwsh
         run: |
           $output = Join-Path $env:RUNNER_TEMP "msix-ci"
-          ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -OutputDirectory $output
+          ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/NoyaPLANET11to10.exe -AuxiliaryExecutable ./build/Release/Win11To10.exe -OutputDirectory $output
           ./scripts/Test-StoreMsixIdentity.ps1 -Path (Join-Path $output "Win11To10-Store-UNSIGNED-x64.msix")
           ./scripts/Test-TrustedSignature.ps1 -Path (Join-Path $output "Win11To10-Store-UNSIGNED-x64.msix") -ExpectUntrusted
       # SECURITY: No EXE or MSIX upload. Unsigned CI binaries must not be
