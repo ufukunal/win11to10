@@ -5,6 +5,9 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
 
 ## Implemented, but not a native shell replacement
 
+- The Start preview implements its own traditional context menu, Enter-key
+  activation and closes upon app launch. This applies only within NoyaPLANET;
+  it does **not** alter Windows 11 Explorer's system-wide context menus.
 - The on-demand Start preview searches installed Start Menu shortcuts and
   launches selected applications. It supports four editable pinned tiles,
   persisted in a per-user config file. It does not change real Start pins. Optional Ctrl+Alt+S works only while the

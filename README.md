@@ -11,7 +11,10 @@ The dashboard shows RAM/build details and offers confirmed, reversible effects
 settings. The standalone Start preview launches built-in apps and searches
 installed user/common Start Menu shortcuts. When the dashboard is open,
 Ctrl+Alt+S can open the preview if that global shortcut is available.
-Up to four Start menu preview tiles can be individually pinned and unpinned;
+Start preview list items now support a traditional right-click menu for
+open/pin/unpin, and Enter or double-click launches the selected app. The
+preview closes after launch. Up to four Start menu preview tiles can be
+individually pinned and unpinned;
 their targets are persisted per user and only launched on a click.
 An optional **docked desktop appbar** is now available under Windows 10 görünümü.
 It uses documented Shell AppBar registration, reserves a small additional strip
@@ -25,7 +28,10 @@ previews; it does not replace or enumerate other apps' tray icons.
 No resident background service is installed. The system-tools menu can read up to eight
 previous Windows boot-duration events (minimum/median/average) and list registered
 startup sources across the user and machine Run keys and two Startup folders.
-All of these reports are read-only. The program's own tray menu also opens a
+All of these reports are read-only. An additional user-triggered system-tools
+report counts running and stopped Windows services via Service Control
+Manager read-only enumeration. It does not recommend disabling a service
+and never requests service-configuration modification privileges. The program's own tray menu also opens a
 native calendar window; it does not replace Windows' taskbar clock.
 
 ## Already implemented

@@ -51,6 +51,9 @@ with optional visual effects disabled and font smoothing preserved.
 - Real window activation, on-demand refresh, local clock and Start preview.
 - Original Windows 11 taskbar is preserved, not replaced or hidden.
 - A user can remove the docked bar at any time; no startup service installed.
+- Start list supports open/pin/unpin context menu and Enter-key activation.
+- Read-only Windows service enumeration and counters from documented SCM APIs;
+  no service configuration is modified.
 - Still needs Windows 11 interactive tests, per-monitor DPI, fullscreen behavior
   and shell restarts before a production claim.
 

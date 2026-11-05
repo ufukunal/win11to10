@@ -18,6 +18,9 @@ Başlat menüsü önizlemesi Windows uygulama kısayollarını arar ve seçilen
 uygulamaları açar. Kullanıcı dört kutucuğu sabitleyip kaldırabilir;
 tercihler yalnızca cihazda saklanır. Sistem araçları menüsünde Windows açılış geçmişinin
 istatistikleri ve başlangıç kaynaklarının salt okunur listesi bulunur.
+Sağ tık ile Başlat önizlemesinde uygulamalar açılabilir veya sabitlenebilir.
+Ayrıca Windows servislerinin durumu güvenli ve salt okunur biçimde incelenir;
+servisler uygulama tarafından otomatik kapatılmaz.
 NoyaPLANET tepsi menüsünden bağımsız bir klasik takvim penceresi açılabilir.
 Kullanıcı onayıyla ekrana yerleşen bir masaüstü çubuğu gösterilebilir;
 Windows'un kendi görev çubuğu ve sistem tepsisi değiştirilmez. Görev çubuğu önizlemesi açık pencereleri gösterir. Kullanıcıya

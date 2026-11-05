@@ -14,7 +14,9 @@ on the Windows device when the relevant screen is opened or refreshed:
   `%LOCALAPPDATA%\\NoyaPLANET\\11to10\\start-pins-v1.txt`.
 - At the user's request, recent Windows boot-duration events (up to 8)
   and names of startup entries in HKCU/HKLM Run and Startup folders.
-- Visible window titles for the taskbar preview.
+- Visible window titles for the taskbar preview and optional docked appbar.
+- When selected, running/stopped service state and a short list of display
+  names read through Windows' Service Control Manager; no service edits.
 - The last Windows Diagnostics-Performance Event 100 boot duration, if the
   Windows Event Log is accessible.
 

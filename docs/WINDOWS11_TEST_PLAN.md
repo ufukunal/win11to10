@@ -24,6 +24,11 @@ compatibility with Windows 11 22H2/23H2/24H2 or later builds.
 - [ ] Ctrl+Alt+S opens Start preview while dashboard is running, if available.
 - [ ] Start menu enumerates per-user/common Start Menu links without crashing.
 - [ ] Search matches a shortcut in a nested Start Menu folder.
+- [ ] Right-click a specific Start list item: the exact clicked app is chosen;
+      Open, Pin, Unpin work; Enter activates the selected item and closes Start.
+- [ ] No app launches during indexing or right-click without an explicit choice.
+- [ ] Read-only Windows service report shows expected totals with no SCM
+      permission to modify services; Windows Security and Update remain active.
 - [ ] Pin a listed shortcut to an available tile; click it to launch only that app.
 - [ ] Unpin all four tiles, close/reopen app, confirm empty layout persists.
 - [ ] Verify a default tile layout appears only when no pin configuration exists.
