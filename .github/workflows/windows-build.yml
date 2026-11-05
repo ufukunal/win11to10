@@ -34,7 +34,8 @@ jobs:
         shell: pwsh
         run: |
           $output = Join-Path $env:RUNNER_TEMP "msix-ci"
-          ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -IdentityName "Win11To10.TestPackage" -Publisher "CN=Win11To10 Test" -OutputDirectory $output
+          ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -OutputDirectory $output
+          ./scripts/Test-StoreMsixIdentity.ps1 -Path (Join-Path $output "Win11To10-Store-UNSIGNED-x64.msix")
           ./scripts/Test-TrustedSignature.ps1 -Path (Join-Path $output "Win11To10-Store-UNSIGNED-x64.msix") -ExpectUntrusted
       # SECURITY: No EXE or MSIX upload. Unsigned CI binaries must not be
       # mistaken for releases or used to bypass Smart App Control.
