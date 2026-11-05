@@ -5,6 +5,8 @@
 #include "StartupWindow.h"
 #include "StartupManager.h"
 #include "InstalledApps.h"
+#include "PackagedApps.h"
+#include "TurkishSearch.h"
 #include "BootMetrics.h"
 #include "BootHistory.h"
 #include "BootComparison.h"
@@ -17,6 +19,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <shellapi.h>
+#include <commctrl.h>
 #include <objbase.h>
 
 #include <algorithm>
@@ -59,6 +62,7 @@ constexpr int kSearch = 201;
 constexpr int kAppList = 202;
 constexpr int kPinSelected = 203;
 constexpr int kUnpinSelected = 204;
+constexpr int kRefreshInstalledApps = 205;
 constexpr int kTileBase = 300;
 
 struct Dashboard {
@@ -82,6 +86,7 @@ struct Dashboard {
 struct PreviewItem {
   std::wstring title;
   std::wstring command;
+  bool shellItem = false; // item comes from Windows AppsFolder, launch via PIDL
 };
 struct StartPreview {
   HWND window{};
@@ -92,6 +97,7 @@ struct StartPreview {
   HWND appList{};
   HWND pinButton{};
   HWND unpinButton{};
+  HWND rescanButton{};
   HWND tilesLabel{};
   HWND tiles[4]{};
   HWND taskbarNote{};
@@ -103,6 +109,8 @@ struct StartPreview {
 };
 Dashboard gDashboard;
 StartPreview gPreview;
+std::vector<PreviewItem> gCachedStartApps;
+bool gCachedStartAppsReady = false;
 HBRUSH gBrush{};
 UINT gTaskbarCreatedMessage = 0;
 bool gTrayIconAdded = false;
@@ -477,8 +485,14 @@ void OpenBuiltIn(HWND hwnd, const wchar_t* executable) {
 void LaunchPreviewIndex(HWND hwnd, std::size_t index) {
   if (index >= gPreview.allApps.size()) return;
   const auto& app = gPreview.allApps[index];
-  OpenBuiltIn(hwnd, app.command.c_str());
-  PostMessageW(hwnd, WM_CLOSE, 0, 0); // Win10-like: Start closes on launch
+  if (app.shellItem) {
+    if (!noya::LaunchAppsFolderItem(hwnd, app.command))
+      MessageBoxW(hwnd, L"Windows uygulaması açılamadı veya kaldırılmış.",
+                  L"Başlat menüsü", MB_ICONWARNING | MB_OK);
+  } else {
+    OpenBuiltIn(hwnd, app.command.c_str());
+  }
+  PostMessageW(hwnd, WM_CLOSE, 0, 0); // Start closes after launch attempt
 }
 
 void UpdatePinnedTiles() {
@@ -537,6 +551,41 @@ void ChangePinnedSelection(bool pin) {
   UpdatePinnedTiles();
 }
 
+// Win10-like keyboard search: Enter launches the highlighted result,
+// Down moves to the list, Escape closes Start. Never auto-launch on typing.
+LRESULT CALLBACK PreviewSearchSubclass(
+    HWND control, UINT message, WPARAM wParam, LPARAM lParam,
+    UINT_PTR subclassId, DWORD_PTR) {
+  if (message == WM_KEYDOWN) {
+    if (wParam == VK_ESCAPE) {
+      if (IsWindow(gPreview.window))
+        PostMessageW(gPreview.window, WM_CLOSE, 0, 0);
+      return 0;
+    }
+    if (wParam == VK_DOWN) {
+      if (IsWindow(gPreview.appList) &&
+          SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) > 0) {
+        SendMessageW(gPreview.appList, LB_SETCURSEL, 0, 0);
+        SetFocus(gPreview.appList);
+      }
+      return 0;
+    }
+    if (wParam == VK_RETURN) {
+      if (IsWindow(gPreview.appList) && !gPreview.visible.empty()) {
+        const LRESULT chosen = SendMessageW(gPreview.appList, LB_GETCURSEL, 0, 0);
+        const std::size_t row = chosen == LB_ERR ? 0 :
+                                static_cast<std::size_t>(chosen);
+        if (row < gPreview.visible.size())
+          LaunchPreviewIndex(gPreview.window, gPreview.visible[row]);
+      }
+      return 0;
+    }
+  }
+  if (message == WM_NCDESTROY)
+    RemoveWindowSubclass(control, PreviewSearchSubclass, subclassId);
+  return DefSubclassProc(control, message, wParam, lParam);
+}
+
 void FilterApps() {
   if (!gPreview.appList || !gPreview.search) return;
   const int length = GetWindowTextLengthW(gPreview.search);
@@ -544,20 +593,42 @@ void FilterApps() {
   GetWindowTextW(gPreview.search, query.data(), length + 1);
   query.resize(static_cast<std::size_t>(length));
 
-  auto lower = [](std::wstring text) {
-    std::transform(text.begin(), text.end(), text.begin(),
-                   [](wchar_t ch) { return static_cast<wchar_t>(std::towlower(ch)); });
-    return text;
-  };
-  const auto needle = lower(query);
   gPreview.visible.clear();
   SendMessageW(gPreview.appList, LB_RESETCONTENT, 0, 0);
   for (std::size_t i = 0; i < gPreview.allApps.size(); ++i) {
-    if (lower(gPreview.allApps[i].title).find(needle) == std::wstring::npos) continue;
+    if (!noya::ContainsTurkish(gPreview.allApps[i].title, query)) continue;
     gPreview.visible.push_back(i);
     SendMessageW(gPreview.appList, LB_ADDSTRING, 0,
                  reinterpret_cast<LPARAM>(gPreview.allApps[i].title.c_str()));
   }
+  if (!gPreview.visible.empty())
+    SendMessageW(gPreview.appList, LB_SETCURSEL, 0, 0);
+}
+
+// Cache the on-demand Shell application scan for subsequent Start openings.
+// Explicit refresh invalidates it; no idle CPU, service or background indexer.
+void RefreshStartIndex(bool force) {
+  if (force || !gCachedStartAppsReady) {
+    std::vector<PreviewItem> entries;
+    for (const auto& builtIn : noya::BuiltInApps())
+      entries.push_back(PreviewItem{std::wstring(builtIn.title),
+                                     std::wstring(builtIn.command)});
+    for (auto& installed : noya::ScanInstalledApps())
+      entries.push_back(PreviewItem{std::move(installed.title),
+                                    std::move(installed.shortcut)});
+    for (auto& packaged : noya::ScanAppsFolder()) {
+      const auto duplicate = std::find_if(entries.begin(), entries.end(),
+          [&](const PreviewItem& item) { return item.title == packaged.title; });
+      if (duplicate == entries.end())
+        entries.push_back(PreviewItem{std::move(packaged.title),
+                          std::move(packaged.parsingName), true});
+    }
+    gCachedStartApps = std::move(entries);
+    gCachedStartAppsReady = true;
+  }
+  gPreview.allApps = gCachedStartApps;
+  UpdatePinnedTiles();
+  FilterApps();
 }
 
 void LayoutPreview(HWND hwnd) {
@@ -584,6 +655,7 @@ void LayoutPreview(HWND hwnd) {
   Place(gPreview.tiles[1], tileX + half + 10, 151, half, 87);
   Place(gPreview.tiles[2], tileX, 249, half, 87);
   Place(gPreview.tiles[3], tileX + half + 10, 249, half, 87);
+  Place(gPreview.rescanButton, tileX, 348, tileWidth, 38);
   Place(gPreview.taskbarNote, 22, height - 99, usable, 61);
 }
 
@@ -608,6 +680,7 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
                          GetModuleHandleW(nullptr), nullptr);
       SendMessageW(gPreview.search, WM_SETFONT,
                    reinterpret_cast<WPARAM>(gPreview.bodyFont), TRUE);
+      SetWindowSubclass(gPreview.search, PreviewSearchSubclass, 1, 0);
       gPreview.appList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
                          WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
                          LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_WANTKEYBOARDINPUT,
@@ -620,6 +693,8 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
                                          kPinSelected, gPreview.bodyFont);
       gPreview.unpinButton = CreateButton(hwnd, L"Sabitlemeyi kaldır",
                                            kUnpinSelected, gPreview.bodyFont);
+      gPreview.rescanButton = CreateButton(hwnd, L"Uygulama listesini yenile",
+                                           kRefreshInstalledApps, gPreview.bodyFont);
       gPreview.tilesLabel = CreateLabel(hwnd, L"Sabitlenmiş uygulamalar",
                                        gPreview.bodyFont);
       constexpr const wchar_t* tiles[]{
@@ -631,12 +706,6 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
           hwnd, L"Görev çubuğu / sistem tepsisi henüz değiştirilmedi.\r\n"
                 L"Başlat kısayolları yalnızca açıldığında taranır.",
           gPreview.bodyFont);
-      for (const auto& builtIn : noya::BuiltInApps())
-        gPreview.allApps.push_back(
-            PreviewItem{std::wstring(builtIn.title), std::wstring(builtIn.command)});
-      for (auto& installed : noya::ScanInstalledApps())
-        gPreview.allApps.push_back(
-            PreviewItem{std::move(installed.title), std::move(installed.shortcut)});
       std::wstring pinError;
       bool hadPins = false;
       if (!noya::LoadPinnedTargets(gPreview.pinnedTargets, hadPins, pinError)) {
@@ -650,8 +719,7 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
           gPreview.pinnedTargets.emplace_back(builtIn);
         }
       }
-      UpdatePinnedTiles();
-      FilterApps();
+      RefreshStartIndex(false);
       RECT client{};
       GetClientRect(hwnd, &client);
       LayoutPreview(hwnd);
@@ -672,6 +740,8 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
         ChangePinnedSelection(true);
       } else if (id == kUnpinSelected && HIWORD(wParam) == BN_CLICKED) {
         ChangePinnedSelection(false);
+      } else if (id == kRefreshInstalledApps && HIWORD(wParam) == BN_CLICKED) {
+        RefreshStartIndex(true);
       } else if (id >= kTileBase && id < kTileBase + 4 && HIWORD(wParam) == BN_CLICKED) {
         const auto pinnedIndex = static_cast<std::size_t>(id - kTileBase);
         if (pinnedIndex < gPreview.pinnedTargets.size()) {
@@ -801,7 +871,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       gDashboard.title = CreateLabel(hwnd, L"NoyaPLANET 11to10",
                                      gDashboard.titleFont);
       gDashboard.subtitle = CreateLabel(
-          hwnd, L"Türkçe kontrol paneli  •  v0.6 geliştirme sürümü\r\n"
+          hwnd, L"Türkçe kontrol paneli  •  v0.7 geliştirme sürümü\r\n"
                 L"Windows 11 altyapısı korunur. Başlat için Ctrl+Alt+S (uygunsa).",
           gDashboard.bodyFont);
       gDashboard.summary = CreateLabel(hwnd, L"Sistem bilgileri okunuyor...",
@@ -809,9 +879,9 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       gDashboard.effects = CreateLabel(hwnd, L"Efekt durumu okunuyor...",
                                         gDashboard.bodyFont);
       gDashboard.warning = CreateLabel(
-          hwnd, L"Önemli: Bu sürüm Windows 10 görev çubuğunu veya sistem tepsisini "
-                L"henüz değiştirmez.\r\n"
-                L"Yalnızca görsel efektlerde geri alınabilir değişiklik yapar.",
+          hwnd, L"Orijinal Başlat/görev çubuğu/sistem tepsisi korunur.\r\n"
+                L"Görsel efektler ve seçili başlangıç kayıtları yalnızca "
+                L"kullanıcı onayıyla değişir; geri yükleme vardır.",
           gDashboard.bodyFont);
       gDashboard.apply = CreateButton(hwnd, L"Performans profilini uygula",
                                       kApply, gDashboard.bodyFont);
@@ -980,12 +1050,14 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::PackagedAppsModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
   }
   // UI smoke test checks real window/control creation and normal teardown
   // without applying settings or opening other apps.
-  const bool uiSmoke = commandLine &&
-      std::wstring_view(commandLine) == L"--ui-smoke-test";
+  const bool shellSmoke = commandLine &&
+      std::wstring_view(commandLine) == L"--shell-smoke-test";
+  const bool uiSmoke = shellSmoke || (commandLine &&
+      std::wstring_view(commandLine) == L"--ui-smoke-test");
   // One tray icon and one dashboard per user session. No resident service.
   HANDLE mutex = CreateMutexW(nullptr, FALSE,
                               L"Local\\NoyaPLANET11to10-GuiInstanceV1");
@@ -1043,6 +1115,39 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
         IsWindow(gDashboard.startup);
     // This sends WM_CLOSE through the same path as clicking the X button,
     // releasing hotkeys, the app-owned tray icon and window brushes.
+    if (uiControlsPresent && shellSmoke) {
+      // Interactive component lifecycle smoke: open and close without
+      // launching apps or changing system settings. Exercises AppsFolder
+      // enumeration, Start controls, native file browser, and calendar.
+      OpenPreview(window);
+      uiControlsPresent = IsWindow(gPreview.window) &&
+          IsWindow(gPreview.search) && IsWindow(gPreview.appList) &&
+          SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) >= 6;
+      if (uiControlsPresent) {
+        SetWindowTextW(gPreview.search, L"Dosya");
+        uiControlsPresent =
+            SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) >= 1;
+      }
+      if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
+
+      noya::ShowClassicFileBrowser(window);
+      HWND fileBrowser = FindWindowW(L"NoyaPlanetClassicFileBrowserV1", nullptr);
+      uiControlsPresent = uiControlsPresent && IsWindow(fileBrowser) &&
+          IsWindow(GetDlgItem(fileBrowser, 509)) &&
+          IsWindow(GetDlgItem(fileBrowser, 507));
+      if (IsWindow(fileBrowser)) DestroyWindow(fileBrowser);
+
+      noya::ShowClassicCalendar(window);
+      HWND calendar = FindWindowW(L"NoyaPlanetClassicCalendarV1", nullptr);
+      uiControlsPresent = uiControlsPresent && IsWindow(calendar);
+      if (IsWindow(calendar)) DestroyWindow(calendar);
+
+      noya::ShowTaskbarPreview(window);
+      HWND taskbar = FindWindowW(L"NoyaPlanetTaskbarPreviewV1", nullptr);
+      uiControlsPresent = uiControlsPresent && IsWindow(taskbar) &&
+          IsWindow(GetDlgItem(taskbar, 400));
+      if (IsWindow(taskbar)) DestroyWindow(taskbar);
+    }
     PostMessageW(window, WM_CLOSE, 0, 0);
   } else {
     ShowWindow(window, show);

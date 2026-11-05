@@ -3,8 +3,8 @@
 #include <winver.h>
 
 1 VERSIONINFO
- FILEVERSION 0,6,0,0
- PRODUCTVERSION 0,6,0,0
+ FILEVERSION 0,7,0,0
+ PRODUCTVERSION 0,7,0,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS VOS_NT_WINDOWS32
@@ -17,11 +17,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "NoyaPLANET\0"
       VALUE "FileDescription", "NoyaPLANET 11to10 - Turkish Windows Control Panel\0"
-      VALUE "FileVersion", "0.6.0.0\0"
+      VALUE "FileVersion", "0.7.0.0\0"
       VALUE "InternalName", "NoyaPLANET11to10\0"
       VALUE "OriginalFilename", "NoyaPLANET11to10.exe\0"
       VALUE "ProductName", "NoyaPLANET 11to10\0"
-      VALUE "ProductVersion", "0.6.0.0\0"
+      VALUE "ProductVersion", "0.7.0.0\0"
     END
   END
   BLOCK "VarFileInfo"

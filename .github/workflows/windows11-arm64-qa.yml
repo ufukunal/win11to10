@@ -49,6 +49,17 @@ jobs:
           $exe = (Resolve-Path ./build-arm64/Release/NoyaPLANET11to10.exe).Path
           $process = Start-Process -FilePath $exe -ArgumentList '--ui-smoke-test' -PassThru -Wait
           if ($process.ExitCode -ne 0) { throw "Windows 11 GUI smoke failed: $($process.ExitCode)" }
+      - name: Verify Start, classic file browser and shell preview controls
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path ./build-arm64/Release/NoyaPLANET11to10.exe).Path
+          $process = Start-Process -FilePath $exe -ArgumentList '--shell-smoke-test' -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw "Windows 11 shell component smoke failed: $($process.ExitCode)" }
+      - name: Report Windows 11 AppsFolder target resolution
+        shell: pwsh
+        run: |
+          ./build-arm64/Release/PackagedAppsSmoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Read-only Windows 11 runtime report
         shell: pwsh
         run: |

@@ -23,9 +23,14 @@ jobs:
         run: |
           $info = (Get-Item ./build/Release/NoyaPLANET11to10.exe).VersionInfo
           if ($info.ProductName -ne "NoyaPLANET 11to10") { throw "Unexpected product identity in Windows metadata." }
-          if ($info.ProductVersion -ne "0.6.0.0") { throw "Unexpected product version in Windows metadata." }
+          if ($info.ProductVersion -ne "0.7.0.0") { throw "Unexpected product version in Windows metadata." }
       - name: Unit tests
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Report supported AppsFolder target resolution
+        shell: pwsh
+        run: |
+          ./build/Release/PackagedAppsSmoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Read-only smoke checks
         shell: pwsh
         run: |
@@ -46,6 +51,12 @@ jobs:
         run: |
           $gui = Start-Process -FilePath (Resolve-Path ./build/Release/NoyaPLANET11to10.exe) -ArgumentList '--ui-smoke-test' -PassThru -Wait
           if ($gui.ExitCode -ne 0) { throw "Native dashboard smoke test failed: $($gui.ExitCode)" }
+      - name: Verify Start, file browser, calendar and taskbar controls
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path ./build/Release/NoyaPLANET11to10.exe).Path
+          $process = Start-Process -FilePath $exe -ArgumentList '--shell-smoke-test' -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw "Shell component smoke failed: $($process.ExitCode)" }
       - name: Assert that unsigned EXE fails the trusted release gate
         shell: pwsh
         run: |
