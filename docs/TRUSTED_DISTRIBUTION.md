@@ -19,8 +19,8 @@ PowerShell execution-policy tricks to install these development builds.
    The -ExpectUntrusted switch is for CI NEGATIVE TESTS only. It is not
    an install bypass or release approval.
 3. MSIX preparation workflow requires MANUAL dispatch, an explicit
-   acknowledgement, and actual Partner Center identity/publisher GitHub
-   variables. It uploads a submission-only artifact with clear warnings and
+   acknowledgement, and the reserved Partner Center identity stored in the repository.
+   It uploads a submission-only artifact with clear warnings and
    one-day retention. It is never an installable release.
 4. Do not publish a GitHub Release or provide an installer link until the
    release's trusted signature is independently verified and the app passes
@@ -46,8 +46,9 @@ are no longer necessary for these fields.
 
 Next steps for the owner:
 1. Complete any remaining Microsoft Partner Center account verification.
-2. Finish an interactive Store-quality application, metadata, screenshots
-   and app branding. v0.1 is a CLI prototype, not suitable for submission.
+2. Finish a Store-quality interface, metadata, screenshots and branding.
+   The v0.2 native dashboard and Start/taskbar previews are not yet a complete
+   product; interactive Windows 11 validation is still required.
 3. After code review and merging to main, manually run the
    "Prepare unsigned MSIX for Partner Center (MANUAL ONLY)" GitHub workflow.
 4. Enter the required acknowledgement: STORE_SUBMISSION_ONLY_NOT_FOR_INSTALL.
@@ -69,6 +70,7 @@ A self-signed certificate alone does not solve public Smart App Control trust.
 After obtaining a certificate, integrate signing with the release pipeline.
 Use the release gate before uploading or advertising the binary:
 
+    pwsh -File scripts/Test-TrustedSignature.ps1 -Path NoyaPLANET11to10.exe
     pwsh -File scripts/Test-TrustedSignature.ps1 -Path Win11To10.exe
 
 It uses SignTool verify /pa /all /v and fails if there is no trusted signer.
