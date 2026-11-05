@@ -25,11 +25,12 @@ int main() {
   unsigned parsed = 0;
   const auto limit = std::min<std::size_t>(apps.size(), 15);
   for (std::size_t i = 0; i < limit; ++i) {
-    PIDLIST_ABSOLUTE item{};
-    const HRESULT hr = SHParseDisplayName(
-        apps[i].parsingName.c_str(), nullptr, &item, 0, nullptr);
-    if (SUCCEEDED(hr) && item) ++parsed;
-    if (item) CoTaskMemFree(item);
+    if (noya::CanResolveAppsFolderItem(apps[i].parsingName)) {
+      ++parsed;
+    } else if (i < 3) {
+      std::wcout << L"Could not resolve (up to 160 characters): "
+                 << apps[i].parsingName.substr(0, 160) << L"\n";
+    }
   }
   CoUninitialize();
   if (parsed == 0) {

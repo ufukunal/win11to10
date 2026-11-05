@@ -39,6 +39,24 @@ bool Plausible(const PackagedApp& item) {
   return !item.title.empty() && item.title.size() <= 180 &&
          !item.parsingName.empty() && item.parsingName.size() <= 2048;
 }
+// AppsFolder typically exposes an AppUserModelId as the parsing name.
+// On some Windows versions that name is relative to AppsFolder, not to
+// Desktop. Resolve via the documented shell:AppsFolder namespace as fallback.
+bool ResolveAppsFolderItem(std::wstring_view name, PIDLIST_ABSOLUTE& pidl) {
+  pidl = nullptr;
+  if (name.empty() || name.size() > 2048) return false;
+  const std::wstring direct(name);
+  if (SUCCEEDED(SHParseDisplayName(direct.c_str(), nullptr,
+                                   &pidl, 0, nullptr)) && pidl) return true;
+  if (pidl) CoTaskMemFree(pidl);
+  pidl = nullptr;
+  const std::wstring withinFolder = L"shell:AppsFolder\\" + direct;
+  if (SUCCEEDED(SHParseDisplayName(withinFolder.c_str(), nullptr,
+                                   &pidl, 0, nullptr)) && pidl) return true;
+  if (pidl) CoTaskMemFree(pidl);
+  pidl = nullptr;
+  return false;
+}
 } // namespace
 
 std::vector<PackagedApp> ScanAppsFolder() {
@@ -82,14 +100,18 @@ std::vector<PackagedApp> ScanAppsFolder() {
   return result;
 }
 
-bool LaunchAppsFolderItem(HWND owner, std::wstring_view parsingName) {
-  if (parsingName.empty() || parsingName.size() > 2048) return false;
-  // The stored name originates from the Shell namespace and is re-parsed
-  // at launch time, so removed/uninstalled apps fail safely.
-  const std::wstring text(parsingName);
+bool CanResolveAppsFolderItem(std::wstring_view parsingName) {
   PIDLIST_ABSOLUTE pidl = nullptr;
-  if (FAILED(SHParseDisplayName(text.c_str(), nullptr, &pidl, 0, nullptr)) ||
-      pidl == nullptr) return false;
+  const bool okay = ResolveAppsFolderItem(parsingName, pidl);
+  if (pidl) CoTaskMemFree(pidl);
+  return okay;
+}
+
+bool LaunchAppsFolderItem(HWND owner, std::wstring_view parsingName) {
+  // The target originates from Windows' AppsFolder and is resolved again
+  // at launch time. Uninstalled applications fail without side effects.
+  PIDLIST_ABSOLUTE pidl = nullptr;
+  if (!ResolveAppsFolderItem(parsingName, pidl)) return false;
   SHELLEXECUTEINFOW execute{};
   execute.cbSize = sizeof(execute);
   execute.fMask = SEE_MASK_IDLIST | SEE_MASK_FLAG_NO_UI;

@@ -18,6 +18,7 @@ std::vector<PackagedApp> ScanAppsFolder();
 
 // Uses Windows Shell to open a selected AppsFolder item by PIDL.
 // Does not start apps during enumeration or acquire admin privileges.
+bool CanResolveAppsFolderItem(std::wstring_view parsingName);
 bool LaunchAppsFolderItem(HWND owner, std::wstring_view parsingName);
 bool PackagedAppsModelSelfTest();
 } // namespace noya
