@@ -2,6 +2,8 @@
 #include "TaskbarPreview.h"
 #include "StartupWindow.h"
 #include "StartupManager.h"
+#include "InstalledApps.h"
+#include "BootMetrics.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -9,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <filesystem>
+#include <cwctype>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -50,6 +53,10 @@ struct Dashboard {
   HFONT bodyFont{};
   HFONT titleFont{};
 };
+struct PreviewItem {
+  std::wstring title;
+  std::wstring command;
+};
 struct StartPreview {
   HWND window{};
   HWND title{};
@@ -61,6 +68,7 @@ struct StartPreview {
   HWND tiles[4]{};
   HWND taskbarNote{};
   std::vector<std::size_t> visible;
+  std::vector<PreviewItem> allApps;
   HFONT bodyFont{};
   HFONT titleFont{};
 };
@@ -106,9 +114,9 @@ void LayoutDashboard(HWND hwnd) {
   const int contentWidth = std::max(100, width - 56);
   Place(gDashboard.title, 28, 20, contentWidth, 46);
   Place(gDashboard.subtitle, 30, 72, contentWidth, 54);
-  Place(gDashboard.summary, 30, 146, contentWidth, 90);
-  Place(gDashboard.effects, 30, 258, contentWidth, 82);
-  Place(gDashboard.warning, 30, 358, contentWidth, 74);
+  Place(gDashboard.summary, 30, 146, contentWidth, 110);
+  Place(gDashboard.effects, 30, 272, contentWidth, 82);
+  Place(gDashboard.warning, 30, 367, contentWidth, 74);
   const int buttonWidth = std::max(150, (contentWidth - 12) / 2);
   const int actionY = std::max(447, height - 190);
   Place(gDashboard.apply, 28, actionY, buttonWidth, 42);
@@ -148,7 +156,15 @@ void RefreshDashboard() {
   details << L"\r\nWindows derlemesi: " << WindowsBuild()
           << L"  |  Sistem çalışma süresi: "
           << (GetTickCount64() / 60000ULL) << L" dakika"
-          << L"\r\nNot: Çalışma süresi, açılış hızını ölçmez.";
+          << L"\r\nSistem çalışma süresi açılış süresi değildir.";
+  const auto boot = noya::ReadLastBootEvent();
+  if (boot.available) {
+    details << L"\r\nSon kaydedilen açılış: " << (boot.milliseconds / 1000ULL)
+            << L"." << ((boot.milliseconds % 1000ULL) / 100ULL)
+            << L" saniye (Olay 100; güncel açılış olmayabilir).";
+  } else {
+    details << L"\r\nAçılış kaydı: " << boot.diagnostic;
+  }
   SetWindowTextW(gDashboard.summary, details.str().c_str());
 
   BOOL smoothing = FALSE;
@@ -255,10 +271,9 @@ void OpenBuiltIn(HWND hwnd, const wchar_t* executable) {
 }
 
 void LaunchPreviewIndex(HWND hwnd, std::size_t index) {
-  const auto& apps = noya::BuiltInApps();
-  if (index >= apps.size()) return;
-  std::wstring command(apps[index].command);
-  OpenBuiltIn(hwnd, command.c_str());
+  if (index >= gPreview.allApps.size()) return;
+  const auto& app = gPreview.allApps[index];
+  OpenBuiltIn(hwnd, app.command.c_str());
 }
 
 void FilterApps() {
@@ -268,13 +283,19 @@ void FilterApps() {
   GetWindowTextW(gPreview.search, query.data(), length + 1);
   query.resize(static_cast<std::size_t>(length));
 
-  gPreview.visible = noya::SearchApps(query);
+  auto lower = [](std::wstring text) {
+    std::transform(text.begin(), text.end(), text.begin(),
+                   [](wchar_t ch) { return static_cast<wchar_t>(std::towlower(ch)); });
+    return text;
+  };
+  const auto needle = lower(query);
+  gPreview.visible.clear();
   SendMessageW(gPreview.appList, LB_RESETCONTENT, 0, 0);
-  for (const auto index : gPreview.visible) {
-    const auto name = noya::BuiltInApps()[index].title;
-    const std::wstring copy(name);
+  for (std::size_t i = 0; i < gPreview.allApps.size(); ++i) {
+    if (lower(gPreview.allApps[i].title).find(needle) == std::wstring::npos) continue;
+    gPreview.visible.push_back(i);
     SendMessageW(gPreview.appList, LB_ADDSTRING, 0,
-                 reinterpret_cast<LPARAM>(copy.c_str()));
+                 reinterpret_cast<LPARAM>(gPreview.allApps[i].title.c_str()));
   }
 }
 
@@ -339,8 +360,14 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
                                          gPreview.bodyFont);
       gPreview.taskbarNote = CreateLabel(
           hwnd, L"Görev çubuğu / sistem tepsisi henüz değiştirilmedi.\r\n"
-                L"Bu sürüm yalnızca bağımsız Başlat menüsü prototipidir.",
+                L"Başlat kısayolları yalnızca açıldığında taranır.",
           gPreview.bodyFont);
+      for (const auto& builtIn : noya::BuiltInApps())
+        gPreview.allApps.push_back(
+            PreviewItem{std::wstring(builtIn.title), std::wstring(builtIn.command)});
+      for (auto& installed : noya::ScanInstalledApps())
+        gPreview.allApps.push_back(
+            PreviewItem{std::move(installed.title), std::move(installed.shortcut)});
       FilterApps();
       RECT client{};
       GetClientRect(hwnd, &client);
@@ -500,8 +527,10 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() ? 0 : 1;
   }
+  const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  if (FAILED(com)) return 1;
   gBrush = CreateSolidBrush(kBackground);
   if (!gBrush) return 1;
   if (!RegisterWindowClass(instance, kDashboardClass, DashboardProc) ||
@@ -526,5 +555,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
     DispatchMessageW(&msg);
   }
   DeleteObject(gBrush);
+  CoUninitialize();
   return static_cast<int>(msg.wParam);
 }
