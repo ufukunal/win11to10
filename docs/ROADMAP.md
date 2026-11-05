@@ -88,3 +88,10 @@ with optional visual effects disabled and font smoothing preserved.
 - Store identity, executable resources and CI metadata version 0.6.0.0.
 - **Still blocking production:** Windows 11 desktop testing, genuine shell
   compatibility, controlled boot benchmarks and Microsoft Store signing.
+
+## CI milestone — Windows 11 ARM64 automated validation
+- GitHub Windows 11 ARM64 VS2026 runner (build 26200) compiles natively.
+- Five tests, original-settings model, disposable HKCU startup round-trip,
+  read-only service enumeration and native GUI open/close smoke test passed.
+- Full Windows 11 x64 compatibility and actual Store install are still not
+  validated; real-user testing remains a release blocker.

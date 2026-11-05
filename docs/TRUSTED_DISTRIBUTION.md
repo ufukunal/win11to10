@@ -60,6 +60,11 @@ Next steps for the owner:
 Store approval is not automatic. A correct package identity does not by
 itself resolve Windows Smart App Control or error 0x800B010A.
 
+The source is automatically tested on Windows Server 2022 x64 and Windows 11
+Enterprise ARM64, but **neither validates a Microsoft Store-installed app on
+Windows 11 x64**. Only an approved Microsoft-signed Store package can be
+offered to end users as a trusted installation.
+
 ## Path B: Direct EXE release from GitHub
 
 Requires a valid, publicly trusted code-signing certificate from an eligible

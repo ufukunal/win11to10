@@ -1,7 +1,10 @@
 # Manual Windows 11 test checklist (before any real release)
 
-Automated CI uses a Windows Server runner. It does NOT establish
-compatibility with Windows 11 22H2/23H2/24H2 or later builds.
+Automated CI includes Windows Server x64 and Windows 11 Enterprise ARM64
+(build 26200) runners. The ARM64 CI validates native compilation, five automated
+tests and Win32 GUI creation/teardown. It does **not** establish compatibility
+with a Windows 11 **x64** interactive desktop, all Windows 11 releases or
+real-world system tray/Explorer/monitor behaviors.
 
 ## Requirements
 
@@ -81,7 +84,11 @@ compatibility with Windows 11 22H2/23H2/24H2 or later builds.
 - [ ] Partial failures display an error and attempt rollback.
 
 ## Compatibility
-- [ ] Test two DPI settings (100%, 150%) and at least two monitor arrangements.
+- [x] Automated native Windows 11 ARM64 runner (build 26200): five tests,
+      GUI creation/teardown and read-only smoke checks. See workflow
+      run 42041127070. No hands-on GUI testing is implied.
+- [ ] Windows 11 x64 desktop: test two DPI settings (100%, 150%) and at least
+      two monitor arrangements.
 - [ ] Test light/dark mode, high contrast, keyboard and screen-reader access.
 - [ ] Test Windows Explorer restart and sign-out/sign-in.
 - [ ] Benchmark memory and launch latency while idle and during app search.
