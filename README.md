@@ -2,6 +2,8 @@
 
 A Windows 11 to Windows 10 appearance and performance project.
 
+**Store product:** NoyaPLANET 11to10. **Publisher:** NoyaPLANET.
+
 **Status: v0.1 performance foundation — Windows 10 shell is NOT yet implemented.**
 
 The current native C++ utility measures limited read-only Windows information
@@ -28,8 +30,8 @@ System uptime is NOT a measure of boot duration.
 The GitHub EXE is **unsigned**. Windows 11 Smart App Control may block it.
 Do **not** turn off Windows security to run it. A SHA-256 checksum does not
 make an executable trusted. An opt-in GitHub Actions workflow can build an
-**UNSIGNED Microsoft Store MSIX submission candidate** after the owner configures
-Partner Center identity details. It is NOT a trusted installer.
+**UNSIGNED Microsoft Store MSIX submission candidate** using the real reserved
+NoyaPLANET 11to10 identity in `packaging/store-identity.json`. It is NOT a trusted installer.
 Microsoft Store signing requires a Partner Center submission and approval;
 the resulting Store-published package is the intended trusted distribution path.
 See [trusted distribution instructions](docs/TRUSTED_DISTRIBUTION.md).
