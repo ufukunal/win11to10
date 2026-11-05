@@ -14,29 +14,28 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Require official Partner Center identity and explicit acknowledgement
+      - name: Confirm actual reserved Partner Center identity and manual acknowledgement
         shell: pwsh
         env:
           CONFIRMATION: ${{ inputs.acknowledgement }}
-          IDENTITY: ${{ vars.WIN11TO10_STORE_IDENTITY }}
-          PUBLISHER: ${{ vars.WIN11TO10_STORE_PUBLISHER }}
         run: |
           if ($env:CONFIRMATION -cne "STORE_SUBMISSION_ONLY_NOT_FOR_INSTALL") { throw "Not acknowledged." }
-          if ([string]::IsNullOrWhiteSpace($env:IDENTITY)) { throw "Configure WIN11TO10_STORE_IDENTITY from Partner Center." }
-          if ([string]::IsNullOrWhiteSpace($env:PUBLISHER)) { throw "Configure WIN11TO10_STORE_PUBLISHER from Partner Center." }
-          if ($env:IDENTITY -match "TestPackage" -or $env:PUBLISHER -match "Test") { throw "Use actual reserved Store package identity, not test values." }
+          $identity = Get-Content -LiteralPath ./packaging/store-identity.json -Raw | ConvertFrom-Json
+          if ($identity.identityName -cne "NoyaPLANET.NoyaPLANET11to10") { throw "Unrecognized package name." }
+          if ($identity.publisher -cne "CN=B8F538D8-3B22-4726-BFFE-72791FFA184C") { throw "Unrecognized publisher." }
+          Write-Host 'Reserved Partner Center identity validated.'
       - name: Compile Windows x64
         run: |
           cmake -S . -B build -A x64
           cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
-      - name: Build unsigned MSIX for Store upload only
+      - name: Build unsigned MSIX for Store submission only
         shell: pwsh
-        env:
-          IDENTITY: ${{ vars.WIN11TO10_STORE_IDENTITY }}
-          PUBLISHER: ${{ vars.WIN11TO10_STORE_PUBLISHER }}
-        run: ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -IdentityName $env:IDENTITY -Publisher $env:PUBLISHER -OutputDirectory dist
+        run: ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -OutputDirectory dist
+      - name: Check manifest matches Partner Center registered identity
+        shell: pwsh
+        run: ./scripts/Test-StoreMsixIdentity.ps1 -Path ./dist/Win11To10-Store-UNSIGNED-x64.msix
       - name: Ensure unsigned candidate is rejected by trusted signature gate
         shell: pwsh
         run: ./scripts/Test-TrustedSignature.ps1 -Path ./dist/Win11To10-Store-UNSIGNED-x64.msix -ExpectUntrusted
