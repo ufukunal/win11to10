@@ -36,22 +36,40 @@ $outDir = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("Win11To10-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path (Join-Path $stage "Assets") -Force | Out-Null
 
-function Write-PlaceholderIcon([int]$size, [string]$path) {
+# Procedural NoyaPLANET icon: an original ringed-planet mark.
+# Replaces the old generic four-square placeholder, no external font/assets.
+function Write-NoyaPlanetIcon([int]$size, [string]$path) {
   $image = [Drawing.Bitmap]::new($size, $size)
-  $graphics = [Drawing.Graphics]::FromImage($image)
-  $brush = [Drawing.SolidBrush]::new([Drawing.Color]::White)
+  $graphic = [Drawing.Graphics]::FromImage($image)
+  $planet = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(99, 212, 236))
+  $shine = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(246, 251, 255))
+  $ring = [Drawing.Pen]::new(
+    [Drawing.Color]::FromArgb(246, 251, 255),
+    [single]([Math]::Max(2, $size * 0.060))
+  )
   try {
-    $graphics.Clear([Drawing.Color]::FromArgb(24,43,74))
-    $width = [int]($size * 0.30)
-    $height = [int]($size * 0.30)
-    $graphics.FillRectangle($brush,[int]($size*0.15),[int]($size*0.15),$width,$height)
-    $graphics.FillRectangle($brush,[int]($size*0.55),[int]($size*0.15),$width,$height)
-    $graphics.FillRectangle($brush,[int]($size*0.15),[int]($size*0.55),$width,$height)
-    $graphics.FillRectangle($brush,[int]($size*0.55),[int]($size*0.55),$width,$height)
+    $graphic.SmoothingMode = [Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $graphic.Clear([Drawing.Color]::FromArgb(20, 32, 56))
+    $graphic.TranslateTransform([single]($size / 2), [single]($size / 2))
+    $graphic.RotateTransform(-24)
+    $graphic.DrawEllipse($ring, [int](-$size * 0.39), [int](-$size * 0.18),
+                         [int]($size * 0.78), [int]($size * 0.36))
+    $graphic.ResetTransform()
+    $graphic.FillEllipse($planet, [int]($size * 0.28), [int]($size * 0.28),
+                        [int]($size * 0.44), [int]($size * 0.44))
+    $graphic.FillEllipse($shine, [int]($size * 0.36), [int]($size * 0.34),
+                        [int]([Math]::Max(2, $size * 0.13)),
+                        [int]([Math]::Max(2, $size * 0.13)))
+    $graphic.FillEllipse($shine, [int]($size * 0.78), [int]($size * 0.15),
+                        [int]([Math]::Max(2, $size * 0.055)),
+                        [int]([Math]::Max(2, $size * 0.055)))
     $image.Save($path, [Drawing.Imaging.ImageFormat]::Png)
-  } finally {
-    $brush.Dispose()
-    $graphics.Dispose()
+  }
+  finally {
+    $ring.Dispose()
+    $shine.Dispose()
+    $planet.Dispose()
+    $graphic.Dispose()
     $image.Dispose()
   }
 }
@@ -60,9 +78,9 @@ try {
   Add-Type -AssemblyName System.Drawing
   Copy-Item -LiteralPath $exe -Destination (Join-Path $stage "NoyaPLANET11to10.exe")
   Copy-Item -LiteralPath $auxiliaryExe -Destination (Join-Path $stage "Win11To10.exe")
-  Write-PlaceholderIcon 44 (Join-Path $stage "Assets\Square44.png")
-  Write-PlaceholderIcon 150 (Join-Path $stage "Assets\Square150.png")
-  Write-PlaceholderIcon 50 (Join-Path $stage "Assets\StoreLogo.png")
+  Write-NoyaPlanetIcon 44 (Join-Path $stage "Assets\Square44.png")
+  Write-NoyaPlanetIcon 150 (Join-Path $stage "Assets\Square150.png")
+  Write-NoyaPlanetIcon 50 (Join-Path $stage "Assets\StoreLogo.png")
 
   $identity = [Security.SecurityElement]::Escape($IdentityName)
   $publisherDn = [Security.SecurityElement]::Escape($Publisher)
@@ -85,7 +103,7 @@ try {
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0"/>
   </Dependencies>
-  <Resources><Resource Language="en-US"/></Resources>
+  <Resources><Resource Language="tr-TR"/><Resource Language="en-US"/></Resources>
   <Applications>
     <Application Id="App" Executable="NoyaPLANET11to10.exe"
       uap10:RuntimeBehavior="packagedClassicApp" uap10:TrustLevel="mediumIL">
