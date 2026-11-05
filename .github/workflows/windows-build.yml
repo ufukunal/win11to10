@@ -1,0 +1,37 @@
+name: Windows x64 build
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure x64
+        run: cmake -S . -B build -A x64
+      - name: Compile
+        run: cmake --build build --config Release --parallel
+      - name: Unit tests
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Read-only smoke checks
+        shell: pwsh
+        run: |
+          .\build\Release\Win11To10.exe analyze
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\build\Release\Win11To10.exe status
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Win11To10-v0.1.0-x64
+          path: build/Release/Win11To10.exe
+          if-no-files-found: error
