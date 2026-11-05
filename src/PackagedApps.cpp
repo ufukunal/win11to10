@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <knownfolders.h>
 #include <shlobj.h>
+#include <shellapi.h>
 #include <shobjidl.h>
 
 #include <algorithm>
