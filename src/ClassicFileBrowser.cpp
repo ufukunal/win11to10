@@ -8,7 +8,9 @@
 #include <shellapi.h>
 
 #include <algorithm>
+#include <cstring>
 #include <cwctype>
+#include <iterator>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -121,6 +123,7 @@ fs::path HomeFolder() {
   if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &folder))) {
     fs::path result(folder);
     CoTaskMemFree(folder);
+    folder = nullptr;
     std::error_code ec;
     if (fs::is_directory(result, ec)) return result;
   }
@@ -237,22 +240,10 @@ bool BrowseTo(fs::path destination, bool remember = true) {
   SetWindowTextW(browser.filter, L"");
   EnableWindow(browser.back, !browser.previous.empty());
   EnableWindow(browser.forward, !browser.next.empty());
-  std::error_code ec;
   EnableWindow(browser.up, browser.current.has_parent_path() &&
                          browser.current.parent_path() != browser.current);
   Render();
   return true;
-}
-
-void BrowseHistory(bool backward) {
-  auto& source = backward ? browser.previous : browser.next;
-  auto& other = backward ? browser.next : browser.previous;
-  if (source.empty()) return;
-  const auto destination = source.back();
-  if (BrowseTo(destination, false)) {
-    other.push_back(browser.current); // replaced current: adjusted below
-    source.pop_back();
-  }
 }
 
 const FileItem* Selected() {
