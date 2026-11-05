@@ -23,6 +23,20 @@ startup program controls, background-service management, measured boot time,
 GUI or one-click installer. Some visual flags may be ignored by Windows 11.
 System uptime is NOT a measure of boot duration.
 
+## Smart App Control protection
+
+The GitHub EXE is **unsigned**. Windows 11 Smart App Control may block it.
+Do **not** turn off Windows security to run it. A SHA-256 checksum does not
+make an executable trusted. A second GitHub Actions workflow now builds an
+**UNSIGNED Microsoft Store MSIX submission candidate** (NOT a trusted installer).
+Microsoft Store signing requires a Partner Center submission and approval;
+the resulting Store-published package is the intended trusted distribution path.
+See [trusted distribution instructions](docs/TRUSTED_DISTRIBUTION.md).
+
+For the visual profile right now without an EXE, open
+`SystemPropertiesPerformance.exe` from Win+R, choose best performance, and
+re-enable the font-smoothing option before applying.
+
 ## Download without Visual Studio
 Open the GitHub Actions tab, choose a successful Windows x64 build, and
 download the Win11To10-v0.1.0-x64 artifact. Extract its executable.
