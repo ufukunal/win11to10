@@ -1,6 +1,7 @@
 #include "StartMenuModel.h"
 #include "TaskbarPreview.h"
 #include "DockedBar.h"
+#include "ClassicFileBrowser.h"
 #include "StartupWindow.h"
 #include "StartupManager.h"
 #include "InstalledApps.h"
@@ -47,6 +48,7 @@ constexpr int kOpenWindowsStartupMenu = 922;
 constexpr int kOpenExplorerOptionsMenu = 923;
 constexpr int kEnableDockMenu = 924;
 constexpr int kDisableDockMenu = 925;
+constexpr int kClassicExplorerMenu = 927;
 constexpr int kServiceInventoryMenu = 926;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
@@ -259,6 +261,9 @@ HMENU BuildDashboardMenu() {
                 L"Ek görev çubuğunu yerleştir (deneysel)");
     AppendMenuW(appearance, MF_STRING, kDisableDockMenu,
                 L"Ek görev çubuğunu kaldır");
+    AppendMenuW(appearance, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(appearance, MF_STRING, kClassicExplorerMenu,
+                L"Klasik dosya tarayıcısını aç");
     AppendMenuW(root, MF_POPUP, reinterpret_cast<UINT_PTR>(appearance),
                 L"Windows 10 görünümü");
   }
@@ -806,6 +811,8 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
           }
           return 0;
         case kDisableDockMenu: noya::CloseDockedBar(); return 0;
+        case kClassicExplorerMenu:
+          noya::ShowClassicFileBrowser(hwnd); return 0;
         case kBootHistoryMenu: ShowBootHistoryReport(hwnd); return 0;
         case kStartupInventoryMenu: ShowStartupInventoryReport(hwnd); return 0;
         case kServiceInventoryMenu: ShowServiceInventoryReport(hwnd); return 0;
@@ -900,7 +907,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
   }
   // One tray icon and one dashboard per user session. No resident service.
   HANDLE mutex = CreateMutexW(nullptr, FALSE,
