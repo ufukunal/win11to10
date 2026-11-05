@@ -278,4 +278,14 @@ void CloseDockedBar() {
 bool IsDockedBarOpen() { return IsWindow(dock.hwnd) && dock.registered; }
 
 HWND DockedBarWindow() { return IsDockedBarOpen() ? dock.hwnd : nullptr; }
+void OnDockedBarExplorerRestart() {
+  if (!IsWindow(dock.hwnd)) return;
+  auto data = Data(dock.hwnd);
+  data.uCallbackMessage = kAppBarNotify;
+  dock.registered = SHAppBarMessage(ABM_NEW, &data) != 0;
+  if (!dock.registered || !Position()) {
+    // Fail closed instead of leaving a broken topmost overlay.
+    DestroyWindow(dock.hwnd);
+  }
+}
 }  // namespace noya

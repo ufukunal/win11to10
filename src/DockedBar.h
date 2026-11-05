@@ -8,4 +8,5 @@ bool OpenDockedBar(HWND dashboard);
 void CloseDockedBar();
 bool IsDockedBarOpen();
 HWND DockedBarWindow();
+void OnDockedBarExplorerRestart();
 }  // namespace noya

@@ -630,6 +630,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
                                WPARAM wParam, LPARAM lParam) {
   if (gTaskbarCreatedMessage != 0 && message == gTaskbarCreatedMessage) {
     gTrayIconAdded = noya::AddOwnTrayIcon(hwnd);
+    noya::OnDockedBarExplorerRestart();
     return 0;
   }
   switch (message) {
