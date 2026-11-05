@@ -380,6 +380,7 @@ void LaunchPreviewIndex(HWND hwnd, std::size_t index) {
   if (index >= gPreview.allApps.size()) return;
   const auto& app = gPreview.allApps[index];
   OpenBuiltIn(hwnd, app.command.c_str());
+  PostMessageW(hwnd, WM_CLOSE, 0, 0); // Win10-like: Start closes on launch
 }
 
 void UpdatePinnedTiles() {
@@ -511,7 +512,7 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
                    reinterpret_cast<WPARAM>(gPreview.bodyFont), TRUE);
       gPreview.appList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
                          WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
-                         LBS_NOTIFY | LBS_NOINTEGRALHEIGHT,
+                         LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_WANTKEYBOARDINPUT,
                          0, 0, 10, 10, hwnd,
                          reinterpret_cast<HMENU>(static_cast<INT_PTR>(kAppList)),
                          GetModuleHandleW(nullptr), nullptr);
@@ -584,6 +585,54 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
             LaunchPreviewIndex(hwnd,
                 static_cast<std::size_t>(app - gPreview.allApps.begin()));
         }
+      }
+      return 0;
+    }
+    case WM_VKEYTOITEM: {
+      if (reinterpret_cast<HWND>(lParam) != gPreview.appList) return -1;
+      if (LOWORD(wParam) == VK_RETURN) {
+        const auto selected = SendMessageW(gPreview.appList, LB_GETCURSEL, 0, 0);
+        if (selected != LB_ERR &&
+            static_cast<std::size_t>(selected) < gPreview.visible.size()) {
+          LaunchPreviewIndex(hwnd, gPreview.visible[
+              static_cast<std::size_t>(selected)]);
+        }
+        return -2; // handled; no listbox incremental search
+      }
+      if (LOWORD(wParam) == VK_ESCAPE) {
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+        return -2;
+      }
+      return -1;
+    }
+    case WM_CONTEXTMENU: {
+      if (reinterpret_cast<HWND>(wParam) != gPreview.appList) break;
+      const LRESULT selected = SendMessageW(gPreview.appList, LB_GETCURSEL, 0, 0);
+      if (selected == LB_ERR) return 0;
+      POINT at{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+      if (lParam == -1) {
+        RECT list{};
+        GetWindowRect(gPreview.appList, &list);
+        at = POINT{list.left + 20, list.top + 20};
+      }
+      HMENU menu = CreatePopupMenu();
+      if (!menu) return 0;
+      AppendMenuW(menu, MF_STRING, 1, L"Uygulamayı aç");
+      AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+      AppendMenuW(menu, MF_STRING, 2, L"Başlat'a sabitle");
+      AppendMenuW(menu, MF_STRING, 3, L"Sabitlemeyi kaldır");
+      const int chosen = TrackPopupMenu(menu,
+          TPM_RETURNCMD | TPM_RIGHTBUTTON,
+          at.x, at.y, 0, hwnd, nullptr);
+      DestroyMenu(menu);
+      if (chosen == 1 &&
+          static_cast<std::size_t>(selected) < gPreview.visible.size()) {
+        LaunchPreviewIndex(hwnd, gPreview.visible[
+            static_cast<std::size_t>(selected)]);
+      } else if (chosen == 2) {
+        ChangePinnedSelection(true);
+      } else if (chosen == 3) {
+        ChangePinnedSelection(false);
       }
       return 0;
     }
