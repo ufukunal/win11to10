@@ -15,6 +15,12 @@ compatibility with Windows 11 22H2/23H2/24H2 or later builds.
 - [ ] Window opens without a blank layout or a long blocking delay.
 - [ ] RAM total/available values are reasonable; no invented boot-time scores.
 - [ ] Refresh displays latest event 100 boot duration, or an explanatory error.
+- [ ] Sistem araçları > Açılış geçmişi displays available records and
+      mean/median/min/max with no claim of proven speedup.
+- [ ] Read-only startup inventory scans HKCU/HKLM Run and user/common Startup
+      folders without changing registry values or shortcut files.
+- [ ] NoyaPLANET tray menu opens separate native calendar; original Windows
+      clock, calendar, flyouts and third-party tray icons still work.
 - [ ] Ctrl+Alt+S opens Start preview while dashboard is running, if available.
 - [ ] Start menu enumerates per-user/common Start Menu links without crashing.
 - [ ] Search matches a shortcut in a nested Start Menu folder.

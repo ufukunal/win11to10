@@ -4,7 +4,7 @@ A Windows 11 to Windows 10 appearance and performance project.
 
 **Store product:** NoyaPLANET 11to10. **Publisher:** NoyaPLANET.
 
-**Status: v0.3 development — native GUI, reversible startup controls, boot-event metrics and shell previews.**
+**Status: v0.4 development — native GUI, current-user startup controls, boot history and classic calendar preview.**
 
 The native C++ utility is now paired with a Turkish Win32 graphical dashboard.
 The dashboard shows RAM/build details and offers confirmed, reversible effects
@@ -15,7 +15,11 @@ The taskbar preview lists and activates real windows on demand, and displays
 a native clock (refreshed only while preview is open). While the dashboard
 is open, a NoyaPLANET-owned tray icon offers a menu for the dashboard and
 previews; it does not replace or enumerate other apps' tray icons.
-No resident background service is installed.
+No resident background service is installed. The system-tools menu can read up to eight
+previous Windows boot-duration events (minimum/median/average) and list registered
+startup sources across the user and machine Run keys and two Startup folders.
+All of these reports are read-only. The program's own tray menu also opens a
+native calendar window; it does not replace Windows' taskbar clock.
 
 ## Already implemented
 - On-demand memory load, available RAM, system uptime, Windows build number.
@@ -28,16 +32,19 @@ No resident background service is installed.
 - A current-user startup manager can disable *one selected* HKCU Run entry after
   confirmation and restore it from its original per-user registry backup.
   It does not modify startup folders, scheduled tasks, other users or services.
-- On-demand boot-duration information from Windows Diagnostics-Performance
-  Event ID 100; this is the latest recorded event, not necessarily the
-  immediately preceding boot. Event logs may be unavailable.
+- On-demand boot-duration history from Windows Diagnostics-Performance Event
+  ID 100: latest, minimum, maximum, mean and median of up to 8 records.
+  Logs may be missing or stale; these figures do not prove speed gains.
+- Read-only inventory of HKCU/HKLM Run and current/common Startup folders.
+  Scheduled Tasks and packaged-app startup sources are not yet indexed.
+- Native app-only classic calendar from NoyaPLANET's own system tray menu.
 - Windows Folder Options opens using supported Windows controls. A classic
   Windows 10 Explorer ribbon is **not** recreated.
 - Windows x64 CI with tests; unsigned binaries are not distributed as releases.
 
 **Not yet implemented:** real Windows-key Start-menu replacement, actual
 Windows 10 taskbar and complete third-party system tray, the classic Explorer
-ribbon/context menus, comprehensive startup handling and service analysis,
+ribbon/context menus, full startup coverage, dependency-safe service analysis,
 repeatable boot-speed comparisons on Windows 11 hardware, Store publication,
 or a signed installer. On-demand boot-event reading is available, but does not
 prove a performance gain. Some visual flags may be ignored by Windows 11.
@@ -114,7 +121,7 @@ See docs/ROADMAP.md for planned interface and performance modules.
 
 ## Store package version
 
-The development MSIX manifest and native GUI file metadata use version `0.3.0.0`.
+The development MSIX manifest and native GUI file metadata use version `0.4.0.0`.
 The packaging artifact remains unsigned and is only suitable for testing and
 Partner Center submission preparation, not local installation.
 
@@ -122,3 +129,10 @@ Partner Center submission preparation, not local installation.
 
 The Start/taskbar and notification-area features are currently safe,
 non-invasive previews. Details: [shell compatibility](docs/SHELL_COMPATIBILITY.md).
+
+### New developer commands (v0.4)
+
+Run the graphical dashboard and use **Sistem araçları** to view the
+multi-boot history or registered startup sources. Use the NoyaPLANET tray
+icon to open the separate native calendar. These are local, user-triggered
+features, not system replacements.

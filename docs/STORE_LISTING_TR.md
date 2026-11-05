@@ -15,7 +15,9 @@ RAM kullanımı, sürüm bilgisi ve bazı görsel efektler gösterilir. Kullanı
 onayıyla görsel efektler azaltılabilir ve ilk ayarlar yedekten geri getirilebilir.
 
 Başlat menüsü önizlemesi Windows uygulama kısayollarını arar ve seçilen
-uygulamaları açar. Görev çubuğu önizlemesi açık pencereleri gösterir. Kullanıcıya
+uygulamaları açar. Sistem araçları menüsünde Windows açılış geçmişinin
+istatistikleri ve başlangıç kaynaklarının salt okunur listesi bulunur.
+NoyaPLANET tepsi menüsünden bağımsız bir klasik takvim penceresi açılabilir. Görev çubuğu önizlemesi açık pencereleri gösterir. Kullanıcıya
 ait belirli otomatik başlangıç kayıtları tek tek, özgün kayıt yedeklenerek
 devre dışı bırakılabilir ve geri yüklenebilir.
 

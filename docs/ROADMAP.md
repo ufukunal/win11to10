@@ -33,15 +33,14 @@ with optional visual effects disabled and font smoothing preserved.
 - Open items: real Windows 11 manual tests, advanced startup source coverage,
   robust benchmark comparisons before/after sign-in and reboot.
 
-## v0.4 — Full startup diagnostics and accurate benchmarks
-- Boot and sign-in comparisons across several clean restarts.
-- Startup folders, Task Scheduler, per-machine Run entries read-only analysis.
-- Detailed impact measurement and safe per-item recovery tests.
-
-## v0.5 — Integrated Windows 10 Start menu
-- Boot/sign-in tracing rather than estimating boot time from OS uptime.
-- Startup folders, task scheduler and enabled-state analysis.
-- User-approved reversible changes, individual per-item restoration.
+## v0.4 — Diagnostics and calendar (implemented in development)
+- Up to eight most recent Windows Event 100 boot records and descriptive statistics.
+- Explicitly on-demand reports, no intrusive background monitoring.
+- Read-only HKCU/HKLM Run + current/common Startup folder inventories.
+- Native Month Calendar popup from NoyaPLANET's own tray icon.
+- Build, package and code metadata version 0.4.0.0.
+- Still missing: full Task Scheduler and packaged app coverage, quantified
+  before/after speed improvement and real Windows 11 desktop tests.
 
 ## v0.5 — Integrated Windows 10 Start menu
 - Native menu, keyboard navigation, installed app search and pinned apps.
