@@ -1,5 +1,6 @@
 #include "StartMenuModel.h"
 #include "TaskbarPreview.h"
+#include "DockedBar.h"
 #include "StartupWindow.h"
 #include "StartupManager.h"
 #include "InstalledApps.h"
@@ -42,6 +43,8 @@ constexpr int kBootHistoryMenu = 920;
 constexpr int kStartupInventoryMenu = 921;
 constexpr int kOpenWindowsStartupMenu = 922;
 constexpr int kOpenExplorerOptionsMenu = 923;
+constexpr int kEnableDockMenu = 924;
+constexpr int kDisableDockMenu = 925;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
@@ -228,6 +231,15 @@ HMENU BuildDashboardMenu() {
   AppendMenuW(tools, MF_STRING, kOpenExplorerOptionsMenu,
               L"Dosya Gezgini seçenekleri");
   AppendMenuW(root, MF_POPUP, reinterpret_cast<UINT_PTR>(tools), L"Sistem araçları");
+  HMENU appearance = CreatePopupMenu();
+  if (appearance) {
+    AppendMenuW(appearance, MF_STRING, kEnableDockMenu,
+                L"Ek görev çubuğunu yerleştir (deneysel)");
+    AppendMenuW(appearance, MF_STRING, kDisableDockMenu,
+                L"Ek görev çubuğunu kaldır");
+    AppendMenuW(root, MF_POPUP, reinterpret_cast<UINT_PTR>(appearance),
+                L"Windows 10 görünümü");
+  }
   return root;
 }
 
@@ -598,8 +610,15 @@ void OpenPreview(HWND owner) {
   }
   RECT parent{};
   GetWindowRect(owner, &parent);
-  const int x = parent.left + 56;
-  const int y = parent.top + 30;
+  int x = parent.left + 56;
+  int y = parent.top + 30;
+  if (HWND docked = noya::DockedBarWindow()) {
+    RECT bar{};
+    GetWindowRect(docked, &bar);
+    // Place the Start preview immediately above our optional docked bar.
+    x = bar.left + 8;
+    y = std::max(0L, bar.top - 610L);
+  }
   HWND preview = CreateWindowExW(
       WS_EX_APPWINDOW, kStartClass, L"NoyaPLANET 11to10 - Başlat menüsü önizlemesi",
       WS_OVERLAPPEDWINDOW | WS_VISIBLE,
@@ -681,6 +700,27 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       return 0;
     case WM_COMMAND:
       switch (LOWORD(wParam)) {
+        case kEnableDockMenu:
+          if (noya::IsDockedBarOpen()) {
+            SetForegroundWindow(noya::DockedBarWindow());
+            return 0;
+          }
+          if (MessageBoxW(hwnd,
+              L"Windows görev çubuğu korunacak.\r\n"
+              L"Ek olarak ekranın altında yer ayıran ayrı bir NoyaPLANET "
+              L"görev çubuğu yerleştirilecek.\r\n\r\n"
+              L"İstediğiniz zaman Kapat veya Windows 10 görünümü > "
+              L"Ek görev çubuğunu kaldır ile kapatabilirsiniz.\r\n\r\n"
+              L"Deneysel özelliği şimdi etkinleştirmek istiyor musunuz?",
+              L"NoyaPLANET 11to10 — ek görev çubuğu",
+              MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES &&
+              !noya::OpenDockedBar(hwnd)) {
+            MessageBoxW(hwnd, L"Görev çubuğu yerleştirilemedi. Windows'un "
+                 L"orijinal görev çubuğu değiştirilmedi.",
+                 L"Yerleştirme hatası", MB_OK | MB_ICONWARNING);
+          }
+          return 0;
+        case kDisableDockMenu: noya::CloseDockedBar(); return 0;
         case kBootHistoryMenu: ShowBootHistoryReport(hwnd); return 0;
         case kStartupInventoryMenu: ShowStartupInventoryReport(hwnd); return 0;
         case kOpenWindowsStartupMenu:
@@ -736,6 +776,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       }
       return DefWindowProcW(hwnd, message, wParam, lParam);
     case WM_CLOSE:
+      noya::CloseDockedBar();
       if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
       DestroyWindow(hwnd);
       return 0;

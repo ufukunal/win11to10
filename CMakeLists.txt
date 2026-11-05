@@ -20,7 +20,7 @@ target_link_libraries(Win11To10 PRIVATE user32 advapi32)
 add_library(StartMenuModel STATIC src/StartMenuModel.cpp)
 target_include_directories(StartMenuModel PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-add_executable(NoyaPLANET11to10 WIN32 src/Gui.cpp src/TaskbarPreview.cpp src/StartupManager.cpp src/StartupWindow.cpp src/InstalledApps.cpp src/BootMetrics.cpp src/BootHistory.cpp src/StartupInventory.cpp src/PinManager.cpp src/ClassicCalendar.cpp src/TrayHost.cpp resources/AppVersion.rc)
+add_executable(NoyaPLANET11to10 WIN32 src/Gui.cpp src/TaskbarPreview.cpp src/DockedBar.cpp src/StartupManager.cpp src/StartupWindow.cpp src/InstalledApps.cpp src/BootMetrics.cpp src/BootHistory.cpp src/StartupInventory.cpp src/PinManager.cpp src/ClassicCalendar.cpp src/TrayHost.cpp resources/AppVersion.rc)
 target_compile_definitions(NoyaPLANET11to10 PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
 target_link_libraries(NoyaPLANET11to10 PRIVATE StartMenuModel user32 gdi32 shell32 advapi32 wevtapi ole32 uuid comctl32)
 
