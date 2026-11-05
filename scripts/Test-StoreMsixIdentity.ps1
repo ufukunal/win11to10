@@ -15,6 +15,12 @@ $package = (Resolve-Path -LiteralPath $Path).Path
 Add-Type -AssemblyName System.IO.Compression
 $zip = [IO.Compression.ZipFile]::OpenRead($package)
 try {
+  if ($null -eq $zip.GetEntry("NoyaPLANET11to10.exe")) {
+    throw "Native GUI executable is missing in package."
+  }
+  if ($null -eq $zip.GetEntry("Win11To10.exe")) {
+    throw "On-demand performance engine is missing in package."
+  }
   $entry = $zip.GetEntry("AppxManifest.xml")
   if ($null -eq $entry) { throw "AppxManifest.xml is missing." }
   $stream = $entry.Open()
@@ -30,7 +36,8 @@ try {
   $display = $manifest.SelectSingleNode("//*[local-name()='Properties']/*[local-name()='DisplayName']")
   $publisherDisplay = $manifest.SelectSingleNode("//*[local-name()='Properties']/*[local-name()='PublisherDisplayName']")
   $visual = $manifest.SelectSingleNode("//*[local-name()='VisualElements']")
-  if ($null -eq $identity -or $null -eq $display -or $null -eq $publisherDisplay -or $null -eq $visual) {
+  $app = $manifest.SelectSingleNode("//*[local-name()='Application']")
+  if ($null -eq $identity -or $null -eq $display -or $null -eq $publisherDisplay -or $null -eq $visual -or $null -eq $app) {
     throw "MSIX manifest lacks identity or display elements."
   }
   $actual = @{
@@ -40,6 +47,7 @@ try {
     displayName = $display.InnerText
     publisherDisplayName = $publisherDisplay.InnerText
     visualDisplayName = $visual.GetAttribute("DisplayName")
+    executable = $app.GetAttribute("Executable")
   }
   $expected = @{
     identityName = [string]$config.identityName
@@ -48,6 +56,7 @@ try {
     displayName = [string]$config.displayName
     publisherDisplayName = [string]$config.publisherDisplayName
     visualDisplayName = [string]$config.displayName
+    executable = "NoyaPLANET11to10.exe"
   }
   foreach ($key in $expected.Keys) {
     if ($actual[$key] -cne $expected[$key]) {
