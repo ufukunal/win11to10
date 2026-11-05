@@ -679,13 +679,34 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
     return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() ? 0 : 1;
   }
+  // One tray icon and one dashboard per user session. No resident service.
+  HANDLE mutex = CreateMutexW(nullptr, FALSE,
+                              L"Local\\NoyaPLANET11to10-GuiInstanceV1");
+  if (!mutex) return 1;
+  if (GetLastError() == ERROR_ALREADY_EXISTS) {
+    if (HWND existing = FindWindowW(kDashboardClass, nullptr)) {
+      ShowWindow(existing, SW_RESTORE);
+      SetForegroundWindow(existing);
+    }
+    CloseHandle(mutex);
+    return 0;
+  }
   const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-  if (FAILED(com)) return 1;
+  if (FAILED(com)) {
+    CloseHandle(mutex);
+    return 1;
+  }
   gBrush = CreateSolidBrush(kBackground);
-  if (!gBrush) return 1;
+  if (!gBrush) {
+    CoUninitialize();
+    CloseHandle(mutex);
+    return 1;
+  }
   if (!RegisterWindowClass(instance, kDashboardClass, DashboardProc) ||
       !RegisterWindowClass(instance, kStartClass, PreviewProc)) {
     DeleteObject(gBrush);
+    CoUninitialize();
+    CloseHandle(mutex);
     return 1;
   }
   HWND window = CreateWindowExW(
@@ -695,6 +716,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
   if (!window) {
     DeleteObject(gBrush);
     CoUninitialize();
+    CloseHandle(mutex);
     return 1;
   }
   if (HMENU menu = BuildDashboardMenu()) {
@@ -711,5 +733,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
   }
   DeleteObject(gBrush);
   CoUninitialize();
+  CloseHandle(mutex);
   return static_cast<int>(msg.wParam);
 }
