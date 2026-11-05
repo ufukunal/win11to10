@@ -27,7 +27,9 @@ with optional visual effects disabled and font smoothing preserved.
 - On-demand Windows Diagnostics-Performance event 100 read (milliseconds).
 - Event data may be stale or inaccessible; no unverified speed claims.
 - Ctrl+Alt+S hotkey when the GUI is running, without hijacking Windows key.
-- Taskbar preview native clock; Windows Folder Options access.
+- Taskbar preview native clock and NoyaPLANET-owned tray icon;
+  existing third-party tray icons remain under Windows Explorer management.
+- Windows Folder Options access and native GUI version metadata.
 - Open items: real Windows 11 manual tests, advanced startup source coverage,
   robust benchmark comparisons before/after sign-in and reboot.
 

@@ -4,7 +4,7 @@ A Windows 11 to Windows 10 appearance and performance project.
 
 **Store product:** NoyaPLANET 11to10. **Publisher:** NoyaPLANET.
 
-**Status: v0.3 development — light native GUI, startup controls, boot event metrics, Start/taskbar previews.**
+**Status: v0.3 development — native GUI, reversible startup controls, boot-event metrics and shell previews.**
 
 The native C++ utility is now paired with a Turkish Win32 graphical dashboard.
 The dashboard shows RAM/build details and offers confirmed, reversible effects
@@ -12,7 +12,9 @@ settings. The standalone Start preview launches built-in apps and searches
 installed user/common Start Menu shortcuts. When the dashboard is open,
 Ctrl+Alt+S can open the preview if that global shortcut is available.
 The taskbar preview lists and activates real windows on demand, and displays
-a native clock (refreshed only while preview is open).
+a native clock (refreshed only while preview is open). While the dashboard
+is open, a NoyaPLANET-owned tray icon offers a menu for the dashboard and
+previews; it does not replace or enumerate other apps' tray icons.
 No resident background service is installed.
 
 ## Already implemented
@@ -109,3 +111,9 @@ services, startup programs or kernel features. The prototype is **unsigned**;
 Smart App Control may block it. Do not disable security protections to use it.
 
 See docs/ROADMAP.md for planned interface and performance modules.
+
+## Store package version
+
+The development MSIX manifest and native GUI file metadata use version `0.3.0.0`.
+The packaging artifact remains unsigned and is only suitable for testing and
+Partner Center submission preparation, not local installation.
