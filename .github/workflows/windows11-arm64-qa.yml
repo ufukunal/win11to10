@@ -1,0 +1,61 @@
+name: Windows 11 ARM64 validation (NOT A RELEASE)
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows11-arm64:
+    name: Windows 11 ARM64 native build and GUI smoke
+    runs-on: windows-11-vs2026-arm
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm genuine Windows 11 ARM64 runner
+        shell: pwsh
+        run: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          $arch = $env:PROCESSOR_ARCHITECTURE
+          Write-Host "OS caption: $($os.Caption)"
+          Write-Host "OS build: $($os.BuildNumber)"
+          Write-Host "Processor architecture: $arch"
+          if ([int]$os.BuildNumber -lt 22000) { throw "Not a Windows 11 runner." }
+          if ($arch -ne 'ARM64') { throw "Expected native ARM64 runner." }
+      - name: Configure native ARM64 with Visual Studio 2026
+        shell: pwsh
+        run: cmake -S . -B build-arm64 -G "Visual Studio 18 2026" -A ARM64 -DNOYAPLANET_ENABLE_HKCU_INTEGRATION_TESTS=ON
+      - name: Compile native Windows 11 ARM64 binaries
+        shell: pwsh
+        run: cmake --build build-arm64 --config Release --parallel
+      - name: Assert product metadata matches Partner Center version
+        shell: pwsh
+        run: |
+          $gui = Get-Item ./build-arm64/Release/NoyaPLANET11to10.exe
+          $version = (Get-Content ./packaging/store-identity.json -Raw | ConvertFrom-Json).version
+          if ($gui.VersionInfo.ProductVersion -ne $version) { throw "GUI/Store version mismatch." }
+      - name: C++ and HKCU registry integration tests
+        shell: pwsh
+        run: ctest --test-dir build-arm64 -C Release --output-on-failure
+      - name: Native Win32 GUI window creation and cleanup
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path ./build-arm64/Release/NoyaPLANET11to10.exe).Path
+          $process = Start-Process -FilePath $exe -ArgumentList '--ui-smoke-test' -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw "Windows 11 GUI smoke failed: $($process.ExitCode)" }
+      - name: Read-only Windows 11 runtime report
+        shell: pwsh
+        run: |
+          ./build-arm64/Release/Win11To10.exe analyze
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./build-arm64/Release/Win11To10.exe status
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # NO unsigned binaries or installers are uploaded for distribution.
+      # Windows 11 ARM64 CI does not replace x64/physical desktop tests,
+      # Smart App Control validation, or Microsoft Store certification.
