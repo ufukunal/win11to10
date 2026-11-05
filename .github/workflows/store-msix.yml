@@ -1,37 +1,62 @@
-name: Store MSIX submission candidate (UNSIGNED)
+name: Prepare unsigned MSIX for Partner Center (MANUAL ONLY)
 on:
-  push:
-    branches:
-      - main
-      - "feature/**"
-  pull_request:
   workflow_dispatch:
+    inputs:
+      acknowledgement:
+        description: Type STORE_SUBMISSION_ONLY_NOT_FOR_INSTALL
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
-  package:
+  prepare-store-submission:
     runs-on: windows-2022
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - name: Require official Partner Center identity and explicit acknowledgement
+        shell: pwsh
+        env:
+          CONFIRMATION: ${{ inputs.acknowledgement }}
+          IDENTITY: ${{ vars.WIN11TO10_STORE_IDENTITY }}
+          PUBLISHER: ${{ vars.WIN11TO10_STORE_PUBLISHER }}
+        run: |
+          if ($env:CONFIRMATION -cne "STORE_SUBMISSION_ONLY_NOT_FOR_INSTALL") { throw "Not acknowledged." }
+          if ([string]::IsNullOrWhiteSpace($env:IDENTITY)) { throw "Configure WIN11TO10_STORE_IDENTITY from Partner Center." }
+          if ([string]::IsNullOrWhiteSpace($env:PUBLISHER)) { throw "Configure WIN11TO10_STORE_PUBLISHER from Partner Center." }
+          if ($env:IDENTITY -match "TestPackage" -or $env:PUBLISHER -match "Test") { throw "Use actual reserved Store package identity, not test values." }
       - name: Compile Windows x64
         run: |
           cmake -S . -B build -A x64
           cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
-      - name: Package unsigned MSIX for Store review
+      - name: Build unsigned MSIX for Store upload only
         shell: pwsh
         env:
-          IDENTITY: ${{ vars.WIN11TO10_STORE_IDENTITY || 'Win11To10.TestPackage' }}
-          PUBLISHER: ${{ vars.WIN11TO10_STORE_PUBLISHER || 'CN=Win11To10 Test' }}
+          IDENTITY: ${{ vars.WIN11TO10_STORE_IDENTITY }}
+          PUBLISHER: ${{ vars.WIN11TO10_STORE_PUBLISHER }}
         run: ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -IdentityName $env:IDENTITY -Publisher $env:PUBLISHER -OutputDirectory dist
-      - name: Upload UNSIGNED submission candidate (not for installation)
+      - name: Ensure unsigned candidate is rejected by trusted signature gate
+        shell: pwsh
+        run: ./scripts/Test-TrustedSignature.ps1 -Path ./dist/Win11To10-Store-UNSIGNED-x64.msix -ExpectUntrusted
+      - name: Add prominent submission-only warning to artifact
+        shell: pwsh
+        run: |
+          @(
+            "NOT INSTALLABLE / NOT TRUSTED / DO NOT SIDELOAD",
+            "This MSIX is unsigned and is ONLY intended for upload to Partner Center.",
+            "It will report an invalid/missing certificate (including 0x800B010A).",
+            "Microsoft Store signing happens AFTER approval of the submission.",
+            "Do not disable Smart App Control or import a test certificate."
+          ) | Set-Content -Path dist/DO_NOT_INSTALL.txt -Encoding UTF8
+      - name: Upload submission files (NOT FOR INSTALLATION)
         uses: actions/upload-artifact@v4
         with:
-          name: Win11To10-UNSIGNED-Store-submission-only
+          name: PARTNER_CENTER_UPLOAD_ONLY__UNSIGNED__DO_NOT_INSTALL
           path: |
-            dist/*.msix
-            dist/*.sha256
+            dist/Win11To10-Store-UNSIGNED-x64.msix
+            dist/Win11To10-Store-UNSIGNED-x64.msix.sha256
+            dist/DO_NOT_INSTALL.txt
+          retention-days: 1
           if-no-files-found: error
-

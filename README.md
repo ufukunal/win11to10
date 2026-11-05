@@ -16,7 +16,7 @@ No background process runs continuously, and no service is installed.
   enabling font smoothing.
 - Original current-user visual settings backed up before the first change.
 - Restore from the saved original settings, with rollback attempts on failures.
-- Windows x64 CI with test and downloadable executable.
+- Windows x64 CI with tests; unsigned binaries are not distributed as releases.
 
 **Not yet implemented:** Windows 10 Start menu, taskbar, system tray, Explorer,
 startup program controls, background-service management, measured boot time,
@@ -27,8 +27,9 @@ System uptime is NOT a measure of boot duration.
 
 The GitHub EXE is **unsigned**. Windows 11 Smart App Control may block it.
 Do **not** turn off Windows security to run it. A SHA-256 checksum does not
-make an executable trusted. A second GitHub Actions workflow now builds an
-**UNSIGNED Microsoft Store MSIX submission candidate** (NOT a trusted installer).
+make an executable trusted. An opt-in GitHub Actions workflow can build an
+**UNSIGNED Microsoft Store MSIX submission candidate** after the owner configures
+Partner Center identity details. It is NOT a trusted installer.
 Microsoft Store signing requires a Partner Center submission and approval;
 the resulting Store-published package is the intended trusted distribution path.
 See [trusted distribution instructions](docs/TRUSTED_DISTRIBUTION.md).
@@ -37,10 +38,13 @@ For the visual profile right now without an EXE, open
 `SystemPropertiesPerformance.exe` from Win+R, choose best performance, and
 re-enable the font-smoothing option before applying.
 
-## Download without Visual Studio
-Open the GitHub Actions tab, choose a successful Windows x64 build, and
-download the Win11To10-v0.1.0-x64 artifact. Extract its executable.
-No local compiler or Visual Studio installation is required.
+## Install status (no Visual Studio required)
+There is currently **no publicly installable release**. GitHub CI compiles and
+tests the code, but **does not upload unsigned executables as releases**.
+Old artifact downloads are unsigned and remain blocked by Smart App Control.
+See the trusted distribution guide for Microsoft Store signing steps.
+When an approved, signed Store version exists, it can be installed directly
+through Microsoft Store without Visual Studio.
 
 ## Commands
 Open PowerShell in the EXE folder. Run as a standard user.
@@ -68,7 +72,7 @@ GitHub Actions compiles this project using CMake with MSVC on a hosted runner.
     ctest --test-dir build -C Release --output-on-failure
 
 **Security:** This utility does not disable Defender, Windows Update, security
-services, startup programs or kernel features. The EXE is not signed; Windows
-SmartScreen may warn about unknown publishers.
+services, startup programs or kernel features. The prototype is **unsigned**;
+Smart App Control may block it. Do not disable security protections to use it.
 
 See docs/ROADMAP.md for planned interface and performance modules.

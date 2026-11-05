@@ -1,4 +1,4 @@
-name: Windows x64 build
+name: Windows x64 CI (NOT A RELEASE)
 on:
   push:
     branches:
@@ -6,14 +6,12 @@ on:
       - "feature/**"
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  build-test:
+  build-and-security-tests:
     runs-on: windows-2022
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - name: Configure x64
@@ -25,13 +23,18 @@ jobs:
       - name: Read-only smoke checks
         shell: pwsh
         run: |
-          .\build\Release\Win11To10.exe analyze
+          ./build/Release/Win11To10.exe analyze
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          .\build\Release\Win11To10.exe status
+          ./build/Release/Win11To10.exe status
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Upload portable EXE
-        uses: actions/upload-artifact@v4
-        with:
-          name: Win11To10-v0.1.0-x64
-          path: build/Release/Win11To10.exe
-          if-no-files-found: error
+      - name: Assert that unsigned EXE fails the trusted release gate
+        shell: pwsh
+        run: ./scripts/Test-TrustedSignature.ps1 -Path ./build/Release/Win11To10.exe -ExpectUntrusted
+      - name: Validate Store MSIX generation (CI only, not published)
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP "msix-ci"
+          ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -IdentityName "Win11To10.TestPackage" -Publisher "CN=Win11To10 Test" -OutputDirectory $output
+          ./scripts/Test-TrustedSignature.ps1 -Path (Join-Path $output "Win11To10-Store-UNSIGNED-x64.msix") -ExpectUntrusted
+      # SECURITY: No EXE or MSIX upload. Unsigned CI binaries must not be
+      # mistaken for releases or used to bypass Smart App Control.
