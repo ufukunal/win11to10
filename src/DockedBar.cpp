@@ -185,7 +185,7 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       Position();
       UpdateClock();
       UpdateWindows();
-      SetTimer(hwnd, 1, 60000, nullptr); // clock only; no ongoing window polling
+      SetTimer(hwnd, 1, 30000, nullptr); // keep clock and open-window buttons current
       return 0;
     }
     case WM_SIZE:
@@ -203,7 +203,10 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       return DefWindowProcW(hwnd, message, wParam, lParam);
     }
     case WM_TIMER:
-      if (wParam == 1) UpdateClock();
+      if (wParam == 1) {
+        UpdateClock();
+        UpdateWindows();
+      }
       return 0;
     case WM_COMMAND:
       if (HIWORD(wParam) != BN_CLICKED) break;
