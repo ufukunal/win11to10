@@ -32,7 +32,7 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
       - name: Build unsigned MSIX for Store submission only
         shell: pwsh
-        run: ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -OutputDirectory dist
+        run: ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/NoyaPLANET11to10.exe -AuxiliaryExecutable ./build/Release/Win11To10.exe -OutputDirectory dist
       - name: Check manifest matches Partner Center registered identity
         shell: pwsh
         run: ./scripts/Test-StoreMsixIdentity.ps1 -Path ./dist/Win11To10-Store-UNSIGNED-x64.msix
