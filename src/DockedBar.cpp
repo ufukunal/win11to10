@@ -107,7 +107,7 @@ void PlaceChildren() {
   if (!IsWindow(dock.hwnd)) return;
   RECT rect{};
   GetClientRect(dock.hwnd, &rect);
-  const int width = std::max(rect.right, 360);
+  const int width = std::max(static_cast<int>(rect.right), 360);
   const int margin = 6;
   MoveWindow(dock.start, margin, 8, 88, 36, TRUE);
   MoveWindow(dock.refresh, 100, 8, 64, 36, TRUE);
