@@ -117,3 +117,8 @@ See docs/ROADMAP.md for planned interface and performance modules.
 The development MSIX manifest and native GUI file metadata use version `0.3.0.0`.
 The packaging artifact remains unsigned and is only suitable for testing and
 Partner Center submission preparation, not local installation.
+
+## Windows 10 compatibility limits
+
+The Start/taskbar and notification-area features are currently safe,
+non-invasive previews. Details: [shell compatibility](docs/SHELL_COMPATIBILITY.md).
