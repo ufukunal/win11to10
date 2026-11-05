@@ -24,6 +24,13 @@ compatibility with Windows 11 22H2/23H2/24H2 or later builds.
 - [ ] Ctrl+Alt+S opens Start preview while dashboard is running, if available.
 - [ ] Start menu enumerates per-user/common Start Menu links without crashing.
 - [ ] Search matches a shortcut in a nested Start Menu folder.
+- [ ] Native classic file browser opens separately without modifying Windows Explorer.
+- [ ] Its address bar, back/forward/up/home and folder filter work with Unicode
+      filenames, empty folders and inaccessible folders.
+- [ ] Double-click opens only explicitly selected files/folders; copying a path
+      requires explicit click; no file is modified by the browser.
+- [ ] Close the browser, restart Explorer, and confirm all Windows shell
+      associations, context menus and taskbar operations remain intact.
 - [ ] Right-click a specific Start list item: the exact clicked app is chosen;
       Open, Pin, Unpin work; Enter activates the selected item and closes Start.
 - [ ] No app launches during indexing or right-click without an explicit choice.
@@ -79,6 +86,9 @@ compatibility with Windows 11 22H2/23H2/24H2 or later builds.
 - [ ] Test Windows Explorer restart and sign-out/sign-in.
 - [ ] Benchmark memory and launch latency while idle and during app search.
 - [ ] Complete two reboot baselines with diagnostics Event 100 and note hardware.
+- [ ] Save a boot baseline with at least three Event 100 records; reboot at
+      least three times with controlled conditions and compare only post-baseline
+      EventRecordIDs. New sample count below three must not show a speed claim.
 - [ ] Test before/after comparisons over repeated reboots; ignore OS uptime.
 - [ ] No increase in persistent service footprint or automatic startup entries.
 - [ ] Verify MSIX identity, publisher, signing status and Store installation

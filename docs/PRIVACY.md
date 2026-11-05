@@ -19,6 +19,12 @@ on the Windows device when the relevant screen is opened or refreshed:
   names read through Windows' Service Control Manager; no service edits.
 - The last Windows Diagnostics-Performance Event 100 boot duration, if the
   Windows Event Log is accessible.
+- Only on request, the boot baseline's median, sample count and latest
+  EventRecordID are stored under
+  `%LOCALAPPDATA%\\NoyaPLANET\\11to10\\boot-baseline-v1.txt`.
+  This contains no credentials or individual file contents.
+- File and folder names while browsing with the optional native file browser;
+  the browser does not store directory listings or transfer them online.
 
 ## User-controlled changes
 - The selected visual effects may be changed after explicit confirmation.
@@ -28,6 +34,11 @@ on the Windows device when the relevant screen is opened or refreshed:
   HKCU\Software\NoyaPLANET\11to10\DisabledStartup and removed from Run.
   The reverse action restores the saved value. This does not affect HKLM,
   other accounts or system services.
+
+User-confirmed boot baseline saving creates or replaces only the app-owned
+local baseline file. The Windows Event Log remains unchanged. User-clicked
+'Open' actions delegate file handling to Windows or the selected application,
+which may have separate effects and privacy terms.
 
 Pin/unpin actions update only the per-user local pin configuration file.
 This does not edit Windows' own Start layout. Removing the app does not

@@ -29,6 +29,10 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
   It is added with Shell_NotifyIcon, and is removed on exit. Existing icons
   remain owned by Explorer. No programmatic migration of other apps' icons is
   attempted.
+- The separate native classic-style file browser provides folder navigation,
+  local filtering and basic file opening with Windows APIs. It does **not**
+  replace File Explorer, alter file associations, install shell extensions or
+  restore the Windows 10 Explorer ribbon/global context menus.
 - Windows Folder Options opens as a supported system control; Windows 10
   Explorer ribbon and legacy global context menus are not restored.
 

@@ -21,6 +21,10 @@ istatistikleri ve başlangıç kaynaklarının salt okunur listesi bulunur.
 Sağ tık ile Başlat önizlemesinde uygulamalar açılabilir veya sabitlenebilir.
 Ayrıca Windows servislerinin durumu güvenli ve salt okunur biçimde incelenir;
 servisler uygulama tarafından otomatik kapatılmaz.
+Windows 10 tarzında bağımsız bir dosya tarayıcısı klasörleri listeler ve seçilen
+öğeleri Windows üzerinden açabilir. İstenirse cihazda yerel açılış ölçümü
+saklanıp sonraki kayıtlarla karşılaştırılabilir. Bu özellik, doğrudan sistem
+Dosya Gezgini'nin yerine geçmez.
 NoyaPLANET tepsi menüsünden bağımsız bir klasik takvim penceresi açılabilir.
 Kullanıcı onayıyla ekrana yerleşen bir masaüstü çubuğu gösterilebilir;
 Windows'un kendi görev çubuğu ve sistem tepsisi değiştirilmez. Görev çubuğu önizlemesi açık pencereleri gösterir. Kullanıcıya

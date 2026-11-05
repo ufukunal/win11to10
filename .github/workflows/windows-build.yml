@@ -23,7 +23,7 @@ jobs:
         run: |
           $info = (Get-Item ./build/Release/NoyaPLANET11to10.exe).VersionInfo
           if ($info.ProductName -ne "NoyaPLANET 11to10") { throw "Unexpected product identity in Windows metadata." }
-          if ($info.ProductVersion -ne "0.5.0.0") { throw "Unexpected product version in Windows metadata." }
+          if ($info.ProductVersion -ne "0.6.0.0") { throw "Unexpected product version in Windows metadata." }
       - name: Unit tests
         run: ctest --test-dir build -C Release --output-on-failure
       - name: Read-only smoke checks

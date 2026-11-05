@@ -77,3 +77,14 @@ with optional visual effects disabled and font smoothing preserved.
 - No permanent modification of Windows system binaries.
 - Keep a recovery path and disclose when OS ignores requests.
 - Do not promise any speedup without before/after measurements.
+
+## v0.6 — Local classic browser and boot comparison (implemented in development)
+- Separate read-only folder browser with native Win32 details, current-folder
+  filter, folder history, address navigation, explicit file opening and path copy.
+- Native GUI init/teardown smoke test in Windows CI.
+- Local, opt-in baseline median and latest EventRecordID snapshot;
+  only compare against three or more new valid boot events.
+- No Explorer hook, global shell context menu replacement or file modifications.
+- Store identity, executable resources and CI metadata version 0.6.0.0.
+- **Still blocking production:** Windows 11 desktop testing, genuine shell
+  compatibility, controlled boot benchmarks and Microsoft Store signing.

@@ -4,7 +4,7 @@ A Windows 11 to Windows 10 appearance and performance project.
 
 **Store product:** NoyaPLANET 11to10. **Publisher:** NoyaPLANET.
 
-**Status: v0.5 development — native GUI, optional docked appbar, Start preview, safe startup controls and boot history.**
+**Status: v0.6 development — native GUI, optional desktop appbar, Start/file-browser previews and measured boot comparisons.**
 
 The native C++ utility is now paired with a Turkish Win32 graphical dashboard.
 The dashboard shows RAM/build details and offers confirmed, reversible effects
@@ -47,6 +47,9 @@ native calendar window; it does not replace Windows' taskbar clock.
   It does not modify startup folders, scheduled tasks, other users or services.
 - On-demand boot-duration history from Windows Diagnostics-Performance Event
   ID 100: latest, minimum, maximum, mean and median of up to 8 records.
+  With explicit consent, a local boot baseline may be saved and compared
+  against at least three **new** Event 100 records after the baseline,
+  using the EventRecordID to reject records from before the baseline.
   Logs may be missing or stale; these figures do not prove speed gains.
 - Read-only inventory of HKCU/HKLM Run and current/common Startup folders.
   Scheduled Tasks and packaged-app startup sources are not yet indexed.
@@ -54,6 +57,10 @@ native calendar window; it does not replace Windows' taskbar clock.
 - Persistent, user-editable four-tile Start preview layout saved under
   `%LOCALAPPDATA%\\NoyaPLANET\\11to10\\start-pins-v1.txt`.
   This does not modify Windows' built-in Start menu or pinned items.
+- A separate native classic-style file browser can browse folders, show
+  name/type/size details, filter the current folder, navigate back/forward/up,
+  open selected files via Windows, copy paths and open the folder in Explorer.
+  It performs no file modifications itself and **does not replace Windows Explorer**.
 - Windows Folder Options opens using supported Windows controls. A classic
   Windows 10 Explorer ribbon is **not** recreated.
 - Windows x64 CI with tests; unsigned binaries are not distributed as releases.
@@ -137,7 +144,7 @@ See docs/ROADMAP.md for planned interface and performance modules.
 
 ## Store package version
 
-The development MSIX manifest and native GUI file metadata use version `0.5.0.0`.
+The development MSIX manifest and native GUI file metadata use version `0.6.0.0`.
 The packaging artifact remains unsigned and is only suitable for testing and
 Partner Center submission preparation, not local installation.
 
@@ -170,3 +177,19 @@ Explorer restarts attempt re-registration, otherwise the bar closes safely.
 This is a real Windows desktop appbar, **not an Explorer taskbar replacement**.
 It has no independent system tray for third-party apps, and is not yet tested
 on real Windows 11 desktops. See [manual test plan](docs/WINDOWS11_TEST_PLAN.md).
+
+### Klasik Dosya Gezgini ve ölçülen açılış karşılaştırması (v0.6)
+
+- `Windows 10 görünümü > Klasik dosya tarayıcısını aç`: ayrı Win32 dosya
+  tarayıcısı. Yalnızca açılan klasör listelenir ve aranır; dosya silme,
+  taşıma veya yeniden adlandırma özelliği yoktur. Dosyaların Windows ile
+  açılması ancak kullanıcı seçtiğinde gerçekleşir.
+- `Sistem araçları > Açılış başlangıç ölçümünü kaydet`: en az üç geçerli
+  Event 100 kaydından bir başlangıç medyanı saklar. Önceki yerel ölçümün
+  üzerine yazılacağı kullanıcıya sorulur.
+- `Sistem araçları > Önce/sonra açılış sürelerini karşılaştır`: yalnızca
+  kayıttan sonra gerçekleşen en az üç açılış olduğunda fark gösterir.
+  Sürelerin değişmesi tek başına NoyaPLANET'in hız kazandırdığını kanıtlamaz.
+
+No publicly installable trusted release exists, and Windows 11 GUI testing
+and Store certification are still required.
