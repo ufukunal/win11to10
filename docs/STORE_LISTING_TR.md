@@ -14,8 +14,10 @@ NoyaPLANET 11to10, Windows 11 üzerinde çalışan yerel bir Windows
 RAM kullanımı, sürüm bilgisi ve bazı görsel efektler gösterilir. Kullanıcı
 onayıyla görsel efektler azaltılabilir ve ilk ayarlar yedekten geri getirilebilir.
 
-Başlat menüsü önizlemesi Windows uygulama kısayollarını arar ve seçilen
-uygulamaları açar. Kullanıcı dört kutucuğu sabitleyip kaldırabilir;
+Başlat menüsü önizlemesi hem klasik Windows uygulama kısayollarını hem de
+Microsoft Store üzerinden kurulan uygulamaları arar ve seçilen uygulamayı
+Windows'un Shell altyapısıyla açar. Türkçe arama ve klavyeyle kullanım
+desteklenir. Kullanıcı dört kutucuğu sabitleyip kaldırabilir;
 tercihler yalnızca cihazda saklanır. Sistem araçları menüsünde Windows açılış geçmişinin
 istatistikleri ve başlangıç kaynaklarının salt okunur listesi bulunur.
 Sağ tık ile Başlat önizlemesinde uygulamalar açılabilir veya sabitlenebilir.

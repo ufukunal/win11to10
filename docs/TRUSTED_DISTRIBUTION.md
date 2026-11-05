@@ -94,3 +94,10 @@ and turn on only "Smooth edges of screen fonts". Click Apply.
 - https://learn.microsoft.com/en-us/windows/apps/publish/get-started
 - https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/upload-app-packages
 - https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions
+
+## Yayıncı için Türkçe adımlar
+
+Microsoft Store hesap ve gönderim işlemleri için
+[STORE_SUBMISSION_STEPS_TR.md](STORE_SUBMISSION_STEPS_TR.md),
+ürün tamamlandı kontrolü için [RELEASE_GATES_TR.md](RELEASE_GATES_TR.md).
+Bu iş akışı Microsoft hesabınıza kendiliğinden giriş yapamaz.

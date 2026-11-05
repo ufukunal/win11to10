@@ -1,7 +1,7 @@
 # Manual Windows 11 test checklist (before any real release)
 
 Automated CI includes Windows Server x64 and Windows 11 Enterprise ARM64
-(build 26200) runners. The ARM64 CI validates native compilation, five automated
+(build 26200) runners. The ARM64 CI validates native compilation, six automated
 tests and Win32 GUI creation/teardown. It does **not** establish compatibility
 with a Windows 11 **x64** interactive desktop, all Windows 11 releases or
 real-world system tray/Explorer/monitor behaviors.
@@ -27,6 +27,14 @@ real-world system tray/Explorer/monitor behaviors.
 - [ ] Ctrl+Alt+S opens Start preview while dashboard is running, if available.
 - [ ] Start menu enumerates per-user/common Start Menu links without crashing.
 - [ ] Search matches a shortcut in a nested Start Menu folder.
+- [ ] Microsoft Store'dan yüklenmiş bir uygulama AppsFolder taramasıyla
+      bulunuyor, gerçekten tıklanınca açılıyor ve kapatılmış/kaldırılmış
+      uygulama için uyarı veriliyor.
+- [ ] Türkçe arama: İSTANBUL/istanbul, ISPARTA/ısparta, Ayarlar/AYARLAR.
+- [ ] Arama kutusunda Enter ilk sonucu açıyor, aşağı ok listeye geçiyor,
+      Escape önizlemeyi kapatıyor.
+- [ ] Başlat bir kez tarandıktan sonra hızlı açılıyor; yalnızca "Uygulama
+      listesini yenile" düğmesiyle kurulu uygulamalar tekrar taranıyor.
 - [ ] Native classic file browser opens separately without modifying Windows Explorer.
 - [ ] Its address bar, back/forward/up/home and folder filter work with Unicode
       filenames, empty folders and inaccessible folders.
@@ -84,7 +92,7 @@ real-world system tray/Explorer/monitor behaviors.
 - [ ] Partial failures display an error and attempt rollback.
 
 ## Compatibility
-- [x] Automated native Windows 11 ARM64 runner (build 26200): five tests,
+- [x] Automated native Windows 11 ARM64 runner (build 26200): six tests,
       GUI creation/teardown and read-only smoke checks. See workflow
       run 42041127070. No hands-on GUI testing is implied.
 - [ ] Windows 11 x64 desktop: test two DPI settings (100%, 150%) and at least

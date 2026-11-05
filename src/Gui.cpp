@@ -871,7 +871,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       gDashboard.title = CreateLabel(hwnd, L"NoyaPLANET 11to10",
                                      gDashboard.titleFont);
       gDashboard.subtitle = CreateLabel(
-          hwnd, L"Türkçe kontrol paneli  •  v0.6 geliştirme sürümü\r\n"
+          hwnd, L"Türkçe kontrol paneli  •  v0.7 geliştirme sürümü\r\n"
                 L"Windows 11 altyapısı korunur. Başlat için Ctrl+Alt+S (uygunsa).",
           gDashboard.bodyFont);
       gDashboard.summary = CreateLabel(hwnd, L"Sistem bilgileri okunuyor...",
@@ -879,9 +879,9 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       gDashboard.effects = CreateLabel(hwnd, L"Efekt durumu okunuyor...",
                                         gDashboard.bodyFont);
       gDashboard.warning = CreateLabel(
-          hwnd, L"Önemli: Bu sürüm Windows 10 görev çubuğunu veya sistem tepsisini "
-                L"henüz değiştirmez.\r\n"
-                L"Yalnızca görsel efektlerde geri alınabilir değişiklik yapar.",
+          hwnd, L"Orijinal Başlat/görev çubuğu/sistem tepsisi korunur.\r\n"
+                L"Görsel efektler ve seçili başlangıç kayıtları yalnızca "
+                L"kullanıcı onayıyla değişir; geri yükleme vardır.",
           gDashboard.bodyFont);
       gDashboard.apply = CreateButton(hwnd, L"Performans profilini uygula",
                                       kApply, gDashboard.bodyFont);

@@ -10,6 +10,9 @@ on the Windows device when the relevant screen is opened or refreshed:
 - Current user's HKCU Run startup names and commands and the application's
   own backups, if the user explicitly disables a startup entry.
 - Current user and common Start Menu shortcuts to populate the preview.
+- Açıkça Başlat önizlemesi açıldığında Windows AppsFolder uygulamalarının
+  görünen adları ve Shell kimlikleri okunur. Liste yalnızca bu işlem açıkken
+  uygulama belleğinde önbelleğe alınır ve internete gönderilmez.
 - Up to four user-selected pinned Start preview targets, saved locally at
   `%LOCALAPPDATA%\\NoyaPLANET\\11to10\\start-pins-v1.txt`.
 - At the user's request, recent Windows boot-duration events (up to 8)

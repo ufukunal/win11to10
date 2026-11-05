@@ -1,97 +1,48 @@
-# Win11To10 development roadmap
+# NoyaPLANET 11to10 — geliştirme yol haritası
 
-The long-term objective is a responsive Windows 10-like desktop on Windows 11,
-with optional visual effects disabled and font smoothing preserved.
+Amaç: Windows 11 üzerinde hafif, geri alınabilir ve Windows 10 22H2'yi
+anımsatan bir masaüstü deneyimi. "Tam kabuk değişimi" ile "bağımsız
+önizleme/ek araç" birbirine karıştırılmamalı.
 
-## v0.1 — Performance foundation (completed in CI)
-- Native C++20 command-line utility, no resident background process.
-- On-demand memory, OS uptime and Windows build report.
-- Startup candidates from HKCU/HKLM Run registry keys, read-only.
-- Current visual effects status and explicitly confirmed performance profile.
-- A write-once per-user baseline, validated restore and rollback attempts.
-- Windows x64 build, read-only smoke tests. Unsigned builds are not released.
+## Tamamlanan geliştirme kaynak kodu
 
-## v0.2 — Native interface previews (implemented in development branch)
-- Turkish Win32 control panel; on-demand system information.
-- Confirmed performance profile and original-settings recovery.
-- Standalone Windows 10-inspired Start menu with app search and fixed launchers.
-- Standalone taskbar with on-demand enumeration and activation of real windows.
-- Store MSIX packs the dashboard and CLI helper; package identity validated in CI.
-- GUI, Start-menu model, packaging and signing-gate automated checks.
-- These windows are prototypes, not Explorer or shell replacements.
+- **v0.1:** C++20 performans CLI; kullanıcı görsel efektleri yedeği/geri alma;
+  font smoothing korunur; otomatik Windows derleme testleri.
+- **v0.2:** Türkçe native Win32 panel, Başlat ve görev çubuğu önizlemeleri.
+- **v0.3:** Geri alınabilir HKCU Run yönetimi, kurulu klasik Başlat kısayolları,
+  ilk açılış olay ölçümleri ve uygulamanın kendi bildirim simgesi.
+- **v0.4:** Açılış geçmişi, başlatma envanteri, takvim ve dört kalıcı kutucuk.
+- **v0.5:** Kullanıcı onaylı ilave masaüstü AppBar, açık pencere yönetimi,
+  salt okunur Windows servis incelemesi.
+- **v0.6:** Ayrı klasik dosya tarayıcısı, kayıt sonrası en az üç yeni açılışla
+  karşılaştırma, Windows 11 ARM64 native CI ve GUI smoke.
+- **v0.7:** AppsFolder içindeki modern Microsoft Store uygulamalarını Başlat
+  menüsüne katma; açılış hedeflerini yeniden çözümleme; uygulama listesi
+  önbelleği ve yenileme, klavye gezinmesi, Türkçe büyük/küçük harf araması,
+  altı otomatik test ve genişletilmiş arayüz bileşeni smoke testi.
 
-## v0.3 — Startup inventory and first boot metrics (implemented in development)
-- Reversible, user-confirmed current-user HKCU Run entry control.
-- Never touch HKLM Run, RunOnce, protected names, services or scheduled tasks.
-- Installed per-user/common Start Menu shortcuts indexed on preview open.
-- On-demand Windows Diagnostics-Performance event 100 read (milliseconds).
-- Event data may be stale or inaccessible; no unverified speed claims.
-- Ctrl+Alt+S hotkey when the GUI is running, without hijacking Windows key.
-- Taskbar preview native clock and NoyaPLANET-owned tray icon;
-  existing third-party tray icons remain under Windows Explorer management.
-- Windows Folder Options access and native GUI version metadata.
-- Open items: real Windows 11 manual tests, advanced startup source coverage,
-  robust benchmark comparisons before/after sign-in and reboot.
+## Ürün tamamlandı denmeden önce
 
-## v0.4 — Diagnostics and calendar (implemented in development)
-- Up to eight most recent Windows Event 100 boot records and descriptive statistics.
-- Explicitly on-demand reports, no intrusive background monitoring.
-- Read-only HKCU/HKLM Run + current/common Startup folder inventories.
-- Native Month Calendar popup from NoyaPLANET's own tray icon.
-- User-editable four-tile Start preview pins, stored only under LocalAppData.
-- Original ringed-planet icon generated for unsigned MSIX packaging;
-  visual branding still requires owner approval.
-- Build, package and code metadata version 0.4.0.0.
-- Still missing: full Task Scheduler and packaged app coverage, quantified
-  before/after speed improvement and real Windows 11 desktop tests.
+1. **Gerçek kabuk entegrasyonu:** Windows'un orijinal Başlat/görev
+   çubuğu/tepsi/Explorer davranışlarının Windows 10'a benzer şekilde
+   desteklenen Windows 11 sürümlerinde çalışması; geri alma ve hata kurtarma.
+   Mevcut AppBar ve Başlat önizlemesi bunların yerine geçmez.
+2. **Windows 11 x64 QA:** Farklı DPI, çoklu monitör, ekran okuyucu,
+   Explorer yeniden başlatma, tam ekran uygulamaları, gerçek mağaza kurulumu.
+3. **Performansın kanıtlanması:** Aynı cihaz, aynı başlangıç koşulları ve
+   tekrarlı açılışlarda karşılaştırılabilir sonuçlar.
+4. **Store yayımlaması:** Son marka varlıkları, gerçek ekran görüntüleri,
+   gizlilik/destek alanları, hesap doğrulaması, Microsoft sertifikasyonu ve
+   güvenilir MSIX imzası.
 
-## v0.5 — Optional real desktop appbar (implemented in development)
-- Explicitly confirmed edge-docked Win32 appbar through documented ABM_NEW,
-  ABM_QUERYPOS, ABM_SETPOS, ABM_REMOVE, and Explorer restart notifications.
-- Real window activation, on-demand refresh, local clock and Start preview.
-- Original Windows 11 taskbar is preserved, not replaced or hidden.
-- A user can remove the docked bar at any time; no startup service installed.
-- Start list supports open/pin/unpin context menu and Enter-key activation.
-- Read-only Windows service enumeration and counters from documented SCM APIs;
-  no service configuration is modified.
-- Still needs Windows 11 interactive tests, per-monitor DPI, fullscreen behavior
-  and shell restarts before a production claim.
+Açık GitHub işleri:
+- https://github.com/ufukunal/win11to10/issues/2 (kabuk entegrasyonu)
+- https://github.com/ufukunal/win11to10/issues/3 (performans)
+- https://github.com/ufukunal/win11to10/issues/4 (Windows 11 QA ve Store)
 
-## v0.6 — Integrated Windows 10 Start menu
-- Native menu, keyboard navigation, installed app search and pinned apps.
-- DPI, accessibility, explorer restart and multimonitor compatibility tests.
+## Değişmeyen güvenlik ilkeleri
 
-## v0.7 — Integrated taskbar and system tray
-- Native taskbar controls and real window enumeration.
-- Preserve third-party tray interactions; avoid unsupported Explorer injection.
-- Strict Windows build compatibility matrix.
-
-## v0.8 — Explorer, Store readiness and signed distribution
-- Supported classic Explorer presentation options.
-- Separate optional settings UI, closed when not in use.
-- Recovery path, tests and installer.
-
-## Safety requirements
-- Never disable Windows Defender or Windows Update.
-- Never silently modify startup items or services.
-- No permanent modification of Windows system binaries.
-- Keep a recovery path and disclose when OS ignores requests.
-- Do not promise any speedup without before/after measurements.
-
-## v0.6 — Local classic browser and boot comparison (implemented in development)
-- Separate read-only folder browser with native Win32 details, current-folder
-  filter, folder history, address navigation, explicit file opening and path copy.
-- Native GUI init/teardown smoke test in Windows CI.
-- Local, opt-in baseline median and latest EventRecordID snapshot;
-  only compare against three or more new valid boot events.
-- No Explorer hook, global shell context menu replacement or file modifications.
-- Store identity, executable resources and CI metadata version 0.6.0.0.
-- **Still blocking production:** Windows 11 desktop testing, genuine shell
-  compatibility, controlled boot benchmarks and Microsoft Store signing.
-
-## CI milestone — Windows 11 ARM64 automated validation
-- GitHub Windows 11 ARM64 VS2026 runner (build 26200) compiles natively.
-- Five tests, original-settings model, disposable HKCU startup round-trip,
-  read-only service enumeration and native GUI open/close smoke test passed.
-- Full Windows 11 x64 compatibility and actual Store install are still not
-  validated; real-user testing remains a release blocker.
+Defender, Smart App Control ve Windows Update kapatılmaz; sistem ikili
+dosyaları yamalanmaz; belirsiz Explorer API'lerine kod enjeksiyonu yapılmaz.
+Otomatik servis kapatma, imzasız kurulumun "güvenilir" gösterilmesi veya
+ölçülmemiş hız artışı iddiaları yoktur.

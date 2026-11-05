@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(Win11To10 VERSION 0.6.0 LANGUAGES CXX RC)
+project(Win11To10 VERSION 0.7.0 LANGUAGES CXX RC)
 
 if(NOT WIN32)
   message(FATAL_ERROR "NoyaPLANET 11to10 currently builds on Windows only.")

@@ -8,6 +8,11 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
 - The Start preview implements its own traditional context menu, Enter-key
   activation and closes upon app launch. This applies only within NoyaPLANET;
   it does **not** alter Windows 11 Explorer's system-wide context menus.
+- The Start preview also enumerates Windows AppsFolder for packaged/Store apps.
+  Selected targets are re-resolved via the Windows Shell namespace and opened
+  only on explicit user interaction. The index is in-memory cached until an
+  explicit refresh. Turkish-language search and Enter/Down/Escape are supported.
+  The real Windows key and original Start integration remain untouched.
 - The on-demand Start preview searches installed Start Menu shortcuts and
   launches selected applications. It supports four editable pinned tiles,
   persisted in a per-user config file. It does not change real Start pins. Optional Ctrl+Alt+S works only while the
