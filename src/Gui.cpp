@@ -8,6 +8,7 @@
 #include "StartupInventory.h"
 #include "TrayHost.h"
 #include "ClassicCalendar.h"
+#include "PinManager.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -44,6 +45,8 @@ constexpr int kOpenExplorerOptionsMenu = 923;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
+constexpr int kPinSelected = 203;
+constexpr int kUnpinSelected = 204;
 constexpr int kTileBase = 300;
 
 struct Dashboard {
@@ -75,11 +78,14 @@ struct StartPreview {
   HWND searchLabel{};
   HWND search{};
   HWND appList{};
+  HWND pinButton{};
+  HWND unpinButton{};
   HWND tilesLabel{};
   HWND tiles[4]{};
   HWND taskbarNote{};
   std::vector<std::size_t> visible;
   std::vector<PreviewItem> allApps;
+  std::vector<std::wstring> pinnedTargets;
   HFONT bodyFont{};
   HFONT titleFont{};
 };
@@ -364,6 +370,62 @@ void LaunchPreviewIndex(HWND hwnd, std::size_t index) {
   OpenBuiltIn(hwnd, app.command.c_str());
 }
 
+void UpdatePinnedTiles() {
+  for (std::size_t i = 0; i < 4; ++i) {
+    if (!gPreview.tiles[i]) continue;
+    if (i >= gPreview.pinnedTargets.size()) {
+      SetWindowTextW(gPreview.tiles[i], L"(Boş kutucuk)");
+      EnableWindow(gPreview.tiles[i], FALSE);
+      continue;
+    }
+    const auto& target = gPreview.pinnedTargets[i];
+    const auto app = std::find_if(gPreview.allApps.begin(), gPreview.allApps.end(),
+        [&](const PreviewItem& item) { return item.command == target; });
+    if (app == gPreview.allApps.end()) {
+      SetWindowTextW(gPreview.tiles[i], L"(Uygulama bulunamadı)");
+      EnableWindow(gPreview.tiles[i], FALSE);
+    } else {
+      SetWindowTextW(gPreview.tiles[i], app->title.c_str());
+      EnableWindow(gPreview.tiles[i], TRUE);
+    }
+  }
+}
+
+void ChangePinnedSelection(bool pin) {
+  const auto position = SendMessageW(gPreview.appList, LB_GETCURSEL, 0, 0);
+  if (position == LB_ERR || position < 0 ||
+      static_cast<std::size_t>(position) >= gPreview.visible.size()) {
+    MessageBoxW(gPreview.window, L"Önce uygulama listesinden bir öğe seçin.",
+                L"Başlat kutucukları", MB_OK | MB_ICONINFORMATION);
+    return;
+  }
+  const auto& selected = gPreview.allApps[
+      gPreview.visible[static_cast<std::size_t>(position)]];
+  std::vector<std::wstring> next = gPreview.pinnedTargets;
+  auto found = std::find(next.begin(), next.end(), selected.command);
+  if (pin) {
+    if (found != next.end()) return;
+    if (next.size() >= 4) {
+      MessageBoxW(gPreview.window,
+                  L"Dört kutucuk dolu. Önce bir uygulamanın sabitlemesini kaldır.",
+                  L"Başlat kutucukları", MB_OK | MB_ICONINFORMATION);
+      return;
+    }
+    next.push_back(selected.command);
+  } else {
+    if (found == next.end()) return;
+    next.erase(found);
+  }
+  std::wstring error;
+  if (!noya::SavePinnedTargets(next, error)) {
+    MessageBoxW(gPreview.window, error.c_str(),
+                L"Sabitlenmiş uygulamalar kaydedilemedi", MB_OK | MB_ICONERROR);
+    return;
+  }
+  gPreview.pinnedTargets = std::move(next);
+  UpdatePinnedTiles();
+}
+
 void FilterApps() {
   if (!gPreview.appList || !gPreview.search) return;
   const int length = GetWindowTextLengthW(gPreview.search);
@@ -400,14 +462,18 @@ void LayoutPreview(HWND hwnd) {
   Place(gPreview.note, 23, 60, usable, 44);
   Place(gPreview.searchLabel, 22, 115, listWidth, 26);
   Place(gPreview.search, 22, 145, listWidth, 32);
-  Place(gPreview.appList, 22, 188, listWidth, std::max(120, height - 286));
+  Place(gPreview.appList, 22, 188, listWidth, std::max(120, height - 350));
+  Place(gPreview.pinButton, 22, height - 150,
+        std::max(85, listWidth / 2 - 5), 38);
+  Place(gPreview.unpinButton, 27 + listWidth / 2, height - 150,
+        std::max(85, listWidth / 2 - 5), 38);
   Place(gPreview.tilesLabel, tileX, 115, tileWidth, 28);
   const int half = (tileWidth - 10) / 2;
   Place(gPreview.tiles[0], tileX, 151, half, 87);
   Place(gPreview.tiles[1], tileX + half + 10, 151, half, 87);
   Place(gPreview.tiles[2], tileX, 249, half, 87);
   Place(gPreview.tiles[3], tileX + half + 10, 249, half, 87);
-  Place(gPreview.taskbarNote, 22, height - 78, usable, 61);
+  Place(gPreview.taskbarNote, 22, height - 99, usable, 61);
 }
 
 LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
@@ -439,6 +505,10 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
                          GetModuleHandleW(nullptr), nullptr);
       SendMessageW(gPreview.appList, WM_SETFONT,
                    reinterpret_cast<WPARAM>(gPreview.bodyFont), TRUE);
+      gPreview.pinButton = CreateButton(hwnd, L"Seçileni sabitle",
+                                         kPinSelected, gPreview.bodyFont);
+      gPreview.unpinButton = CreateButton(hwnd, L"Sabitlemeyi kaldır",
+                                           kUnpinSelected, gPreview.bodyFont);
       gPreview.tilesLabel = CreateLabel(hwnd, L"Sabitlenmiş uygulamalar",
                                        gPreview.bodyFont);
       constexpr const wchar_t* tiles[]{
@@ -456,6 +526,19 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
       for (auto& installed : noya::ScanInstalledApps())
         gPreview.allApps.push_back(
             PreviewItem{std::move(installed.title), std::move(installed.shortcut)});
+      std::wstring pinError;
+      if (!noya::LoadPinnedTargets(gPreview.pinnedTargets, pinError)) {
+        MessageBoxW(hwnd, pinError.c_str(), L"Sabitleme ayarları okunamadı",
+                    MB_OK | MB_ICONWARNING);
+        gPreview.pinnedTargets.clear();
+      }
+      if (gPreview.pinnedTargets.empty() && pinError.empty()) {
+        for (const auto index : {0, 4, 1, 3}) {
+          const auto builtIn = noya::BuiltInApps()[index].command;
+          gPreview.pinnedTargets.emplace_back(builtIn);
+        }
+      }
+      UpdatePinnedTiles();
       FilterApps();
       RECT client{};
       GetClientRect(hwnd, &client);
@@ -473,9 +556,21 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
         const LRESULT selected = SendMessageW(gPreview.appList, LB_GETCURSEL, 0, 0);
         if (selected != LB_ERR && static_cast<std::size_t>(selected) < gPreview.visible.size())
           LaunchPreviewIndex(hwnd, gPreview.visible[static_cast<std::size_t>(selected)]);
+      } else if (id == kPinSelected && HIWORD(wParam) == BN_CLICKED) {
+        ChangePinnedSelection(true);
+      } else if (id == kUnpinSelected && HIWORD(wParam) == BN_CLICKED) {
+        ChangePinnedSelection(false);
       } else if (id >= kTileBase && id < kTileBase + 4 && HIWORD(wParam) == BN_CLICKED) {
-        const std::array<std::size_t, 4> pinned{0, 4, 1, 3};
-        LaunchPreviewIndex(hwnd, pinned[static_cast<std::size_t>(id - kTileBase)]);
+        const auto pinnedIndex = static_cast<std::size_t>(id - kTileBase);
+        if (pinnedIndex < gPreview.pinnedTargets.size()) {
+          const auto& target = gPreview.pinnedTargets[pinnedIndex];
+          const auto app = std::find_if(gPreview.allApps.begin(),
+              gPreview.allApps.end(),
+              [&](const PreviewItem& item) { return item.command == target; });
+          if (app != gPreview.allApps.end())
+            LaunchPreviewIndex(hwnd,
+                static_cast<std::size_t>(app - gPreview.allApps.begin()));
+        }
       }
       return 0;
     }
@@ -677,7 +772,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() ? 0 : 1;
   }
   // One tray icon and one dashboard per user session. No resident service.
   HANDLE mutex = CreateMutexW(nullptr, FALSE,
