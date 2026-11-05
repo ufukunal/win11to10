@@ -1,0 +1,37 @@
+name: Store MSIX submission candidate (UNSIGNED)
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Windows x64
+        run: |
+          cmake -S . -B build -A x64
+          cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package unsigned MSIX for Store review
+        shell: pwsh
+        env:
+          IDENTITY: ${{ vars.WIN11TO10_STORE_IDENTITY || 'Win11To10.TestPackage' }}
+          PUBLISHER: ${{ vars.WIN11TO10_STORE_PUBLISHER || 'CN=Win11To10 Test' }}
+        run: ./scripts/Build-StoreMsix.ps1 -ExePath ./build/Release/Win11To10.exe -IdentityName $env:IDENTITY -Publisher $env:PUBLISHER -OutputDirectory dist
+      - name: Upload UNSIGNED submission candidate (not for installation)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Win11To10-UNSIGNED-Store-submission-only
+          path: |
+            dist/*.msix
+            dist/*.sha256
+          if-no-files-found: error
+
