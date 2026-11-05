@@ -5,6 +5,7 @@
 #include "StartupWindow.h"
 #include "StartupManager.h"
 #include "InstalledApps.h"
+#include "PackagedApps.h"
 #include "BootMetrics.h"
 #include "BootHistory.h"
 #include "BootComparison.h"
@@ -82,6 +83,7 @@ struct Dashboard {
 struct PreviewItem {
   std::wstring title;
   std::wstring command;
+  bool shellItem = false; // item comes from Windows AppsFolder, launch via PIDL
 };
 struct StartPreview {
   HWND window{};
@@ -477,8 +479,14 @@ void OpenBuiltIn(HWND hwnd, const wchar_t* executable) {
 void LaunchPreviewIndex(HWND hwnd, std::size_t index) {
   if (index >= gPreview.allApps.size()) return;
   const auto& app = gPreview.allApps[index];
-  OpenBuiltIn(hwnd, app.command.c_str());
-  PostMessageW(hwnd, WM_CLOSE, 0, 0); // Win10-like: Start closes on launch
+  if (app.shellItem) {
+    if (!noya::LaunchAppsFolderItem(hwnd, app.command))
+      MessageBoxW(hwnd, L"Windows uygulaması açılamadı veya kaldırılmış.",
+                  L"Başlat menüsü", MB_ICONWARNING | MB_OK);
+  } else {
+    OpenBuiltIn(hwnd, app.command.c_str());
+  }
+  PostMessageW(hwnd, WM_CLOSE, 0, 0); // Start closes after launch attempt
 }
 
 void UpdatePinnedTiles() {
@@ -637,6 +645,17 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
       for (auto& installed : noya::ScanInstalledApps())
         gPreview.allApps.push_back(
             PreviewItem{std::move(installed.title), std::move(installed.shortcut)});
+      // On-demand Shell enumeration also covers Store apps, which do not
+      // necessarily have .lnk shortcuts in the classic Start Menu folders.
+      for (auto& packaged : noya::ScanAppsFolder()) {
+        const auto duplicate = std::find_if(gPreview.allApps.begin(),
+          gPreview.allApps.end(), [&](const PreviewItem& item) {
+            return item.title == packaged.title;
+          });
+        if (duplicate == gPreview.allApps.end())
+          gPreview.allApps.push_back(PreviewItem{
+            std::move(packaged.title), std::move(packaged.parsingName), true});
+      }
       std::wstring pinError;
       bool hadPins = false;
       if (!noya::LoadPinnedTargets(gPreview.pinnedTargets, hadPins, pinError)) {
@@ -980,7 +999,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
+    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::PackagedAppsModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
   }
   // UI smoke test checks real window/control creation and normal teardown
   // without applying settings or opening other apps.
