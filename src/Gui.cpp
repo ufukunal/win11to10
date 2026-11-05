@@ -1,4 +1,5 @@
 #include "StartMenuModel.h"
+#include "TaskbarPreview.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -23,6 +24,8 @@ constexpr int kRefresh = 103;
 constexpr int kStartPreview = 104;
 constexpr int kStartupSettings = 105;
 constexpr int kVisualSettings = 106;
+constexpr int kTaskbarPreview = 107;
+constexpr int kAboutSystem = 108;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
 constexpr int kTileBase = 300;
@@ -38,7 +41,9 @@ struct Dashboard {
   HWND restore{};
   HWND refresh{};
   HWND preview{};
+  HWND taskbar{};
   HWND startup{};
+  HWND about{};
   HWND visualSettings{};
   HFONT bodyFont{};
   HFONT titleFont{};
@@ -103,13 +108,15 @@ void LayoutDashboard(HWND hwnd) {
   Place(gDashboard.effects, 30, 258, contentWidth, 82);
   Place(gDashboard.warning, 30, 358, contentWidth, 74);
   const int buttonWidth = std::max(150, (contentWidth - 12) / 2);
-  const int actionY = std::max(455, height - 148);
+  const int actionY = std::max(447, height - 190);
   Place(gDashboard.apply, 28, actionY, buttonWidth, 42);
   Place(gDashboard.restore, 40 + buttonWidth, actionY, buttonWidth, 42);
   Place(gDashboard.preview, 28, actionY + 50, buttonWidth, 38);
-  Place(gDashboard.startup, 40 + buttonWidth, actionY + 50, buttonWidth, 38);
-  Place(gDashboard.refresh, 28, actionY + 96, buttonWidth, 36);
-  Place(gDashboard.visualSettings, 40 + buttonWidth, actionY + 96, buttonWidth, 36);
+  Place(gDashboard.taskbar, 40 + buttonWidth, actionY + 50, buttonWidth, 38);
+  Place(gDashboard.startup, 28, actionY + 96, buttonWidth, 38);
+  Place(gDashboard.visualSettings, 40 + buttonWidth, actionY + 96, buttonWidth, 38);
+  Place(gDashboard.refresh, 28, actionY + 142, buttonWidth, 36);
+  Place(gDashboard.about, 40 + buttonWidth, actionY + 142, buttonWidth, 36);
 }
 
 std::wstring WindowsBuild() {
@@ -415,12 +422,16 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
                                         kRestore, gDashboard.bodyFont);
       gDashboard.preview = CreateButton(hwnd, L"Windows 10 Başlat önizlemesi",
                                         kStartPreview, gDashboard.bodyFont);
+      gDashboard.taskbar = CreateButton(hwnd, L"Windows 10 görev çubuğu önizlemesi",
+                                        kTaskbarPreview, gDashboard.bodyFont);
       gDashboard.startup = CreateButton(hwnd, L"Windows başlangıç uygulamaları",
                                         kStartupSettings, gDashboard.bodyFont);
       gDashboard.refresh = CreateButton(hwnd, L"Sistem bilgilerini yenile",
                                         kRefresh, gDashboard.bodyFont);
       gDashboard.visualSettings = CreateButton(hwnd, L"Windows görsel efekt ayarları",
                                                kVisualSettings, gDashboard.bodyFont);
+      gDashboard.about = CreateButton(hwnd, L"Windows hakkında",
+                                      kAboutSystem, gDashboard.bodyFont);
       RefreshDashboard();
       LayoutDashboard(hwnd);
       return 0;
@@ -430,7 +441,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       return 0;
     case WM_GETMINMAXINFO: {
       auto* data = reinterpret_cast<MINMAXINFO*>(lParam);
-      data->ptMinTrackSize = POINT{670, 640};
+      data->ptMinTrackSize = POINT{690, 690};
       return 0;
     }
     case WM_COMMAND:
@@ -440,8 +451,10 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
           case kRestore: ConfirmAndRun(hwnd, true); break;
           case kRefresh: RefreshDashboard(); break;
           case kStartPreview: OpenPreview(hwnd); break;
+          case kTaskbarPreview: noya::ShowTaskbarPreview(hwnd); break;
           case kStartupSettings: OpenBuiltIn(hwnd, L"ms-settings:startupapps"); break;
           case kVisualSettings: OpenBuiltIn(hwnd, L"SystemPropertiesPerformance.exe"); break;
+          case kAboutSystem: OpenBuiltIn(hwnd, L"ms-settings:about"); break;
           default: break;
         }
       }
@@ -452,6 +465,9 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       SetBkColor(dc, kBackground);
       return reinterpret_cast<INT_PTR>(gBrush);
     }
+    case noya::kRequestStartMenuPreview:
+      OpenPreview(hwnd);
+      return 0;
     case WM_CLOSE:
       if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
       DestroyWindow(hwnd);
@@ -494,7 +510,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
   HWND window = CreateWindowExW(
       0, kDashboardClass, L"NoyaPLANET 11to10 - Kontrol Paneli",
       WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-      860, 650, nullptr, nullptr, instance, nullptr);
+      860, 735, nullptr, nullptr, instance, nullptr);
   if (!window) {
     DeleteObject(gBrush);
     return 1;
