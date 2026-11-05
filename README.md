@@ -4,12 +4,15 @@ A Windows 11 to Windows 10 appearance and performance project.
 
 **Store product:** NoyaPLANET 11to10. **Publisher:** NoyaPLANET.
 
-**Status: v0.2 native graphical dashboard + standalone Start/taskbar previews.**
+**Status: v0.3 development — light native GUI, startup controls, boot event metrics, Start/taskbar previews.**
 
 The native C++ utility is now paired with a Turkish Win32 graphical dashboard.
 The dashboard shows RAM/build details and offers confirmed, reversible effects
-settings. A standalone Start menu preview supports app search and launching.
-A separate taskbar preview lists and activates real windows on demand.
+settings. The standalone Start preview launches built-in apps and searches
+installed user/common Start Menu shortcuts. When the dashboard is open,
+Ctrl+Alt+S can open the preview if that global shortcut is available.
+The taskbar preview lists and activates real windows on demand, and displays
+a native clock (refreshed only while preview is open).
 No resident background service is installed.
 
 ## Already implemented
@@ -20,11 +23,22 @@ No resident background service is installed.
   enabling font smoothing.
 - Original current-user visual settings backed up before the first change.
 - Restore from the saved original settings, with rollback attempts on failures.
+- A current-user startup manager can disable *one selected* HKCU Run entry after
+  confirmation and restore it from its original per-user registry backup.
+  It does not modify startup folders, scheduled tasks, other users or services.
+- On-demand boot-duration information from Windows Diagnostics-Performance
+  Event ID 100; this is the latest recorded event, not necessarily the
+  immediately preceding boot. Event logs may be unavailable.
+- Windows Folder Options opens using supported Windows controls. A classic
+  Windows 10 Explorer ribbon is **not** recreated.
 - Windows x64 CI with tests; unsigned binaries are not distributed as releases.
 
-**Not yet implemented:** Windows 10 system-integrated Start menu and taskbar,
-system tray, Explorer customization, startup app modification, measured boot
-time, full Store-ready polish or a signed installer. Some visual flags may be ignored by Windows 11.
+**Not yet implemented:** real Windows-key Start-menu replacement, actual
+Windows 10 taskbar and complete third-party system tray, the classic Explorer
+ribbon/context menus, comprehensive startup handling and service analysis,
+repeatable boot-speed comparisons on Windows 11 hardware, Store publication,
+or a signed installer. On-demand boot-event reading is available, but does not
+prove a performance gain. Some visual flags may be ignored by Windows 11.
 System uptime is NOT a measure of boot duration.
 
 ## Smart App Control protection
@@ -49,6 +63,16 @@ Old artifact downloads are unsigned and remain blocked by Smart App Control.
 See the trusted distribution guide for Microsoft Store signing steps.
 When an approved, signed Store version exists, it can be installed directly
 through Microsoft Store without Visual Studio.
+
+## Windows 11 compatibility and validation
+
+Builds run on GitHub-hosted Windows Server, **not** a representative Windows 11
+desktop. The Windows 11 manual test plan is in
+[docs/WINDOWS11_TEST_PLAN.md](docs/WINDOWS11_TEST_PLAN.md).
+Do not claim that a Windows 11 build is supported without testing it.
+The startup registry manager edits HKCU only after explicit confirmation;
+the real effects of packaging and Windows StartupApproved policy still
+require desktop testing.
 
 ## Developer binaries
 The build outputs `NoyaPLANET11to10.exe` (native Turkish GUI) and
