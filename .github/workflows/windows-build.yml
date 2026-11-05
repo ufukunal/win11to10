@@ -46,6 +46,12 @@ jobs:
         run: |
           $gui = Start-Process -FilePath (Resolve-Path ./build/Release/NoyaPLANET11to10.exe) -ArgumentList '--ui-smoke-test' -PassThru -Wait
           if ($gui.ExitCode -ne 0) { throw "Native dashboard smoke test failed: $($gui.ExitCode)" }
+      - name: Verify Start, file browser, calendar and taskbar controls
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path ./build/Release/NoyaPLANET11to10.exe).Path
+          $process = Start-Process -FilePath $exe -ArgumentList '--shell-smoke-test' -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw "Shell component smoke failed: $($process.ExitCode)" }
       - name: Assert that unsigned EXE fails the trusted release gate
         shell: pwsh
         run: |

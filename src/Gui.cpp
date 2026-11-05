@@ -1003,8 +1003,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
   }
   // UI smoke test checks real window/control creation and normal teardown
   // without applying settings or opening other apps.
-  const bool uiSmoke = commandLine &&
-      std::wstring_view(commandLine) == L"--ui-smoke-test";
+  const bool shellSmoke = commandLine &&
+      std::wstring_view(commandLine) == L"--shell-smoke-test";
+  const bool uiSmoke = shellSmoke || (commandLine &&
+      std::wstring_view(commandLine) == L"--ui-smoke-test");
   // One tray icon and one dashboard per user session. No resident service.
   HANDLE mutex = CreateMutexW(nullptr, FALSE,
                               L"Local\\NoyaPLANET11to10-GuiInstanceV1");
@@ -1062,6 +1064,39 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
         IsWindow(gDashboard.startup);
     // This sends WM_CLOSE through the same path as clicking the X button,
     // releasing hotkeys, the app-owned tray icon and window brushes.
+    if (uiControlsPresent && shellSmoke) {
+      // Interactive component lifecycle smoke: open and close without
+      // launching apps or changing system settings. Exercises AppsFolder
+      // enumeration, Start controls, native file browser, and calendar.
+      OpenPreview(window);
+      uiControlsPresent = IsWindow(gPreview.window) &&
+          IsWindow(gPreview.search) && IsWindow(gPreview.appList) &&
+          SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) >= 6;
+      if (uiControlsPresent) {
+        SetWindowTextW(gPreview.search, L"Dosya");
+        uiControlsPresent =
+            SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) >= 1;
+      }
+      if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
+
+      noya::ShowClassicFileBrowser(window);
+      HWND fileBrowser = FindWindowW(L"NoyaPlanetClassicFileBrowserV1", nullptr);
+      uiControlsPresent = uiControlsPresent && IsWindow(fileBrowser) &&
+          IsWindow(GetDlgItem(fileBrowser, 509)) &&
+          IsWindow(GetDlgItem(fileBrowser, 507));
+      if (IsWindow(fileBrowser)) DestroyWindow(fileBrowser);
+
+      noya::ShowClassicCalendar(window);
+      HWND calendar = FindWindowW(L"NoyaPlanetClassicCalendarV1", nullptr);
+      uiControlsPresent = uiControlsPresent && IsWindow(calendar);
+      if (IsWindow(calendar)) DestroyWindow(calendar);
+
+      noya::ShowTaskbarPreview(window);
+      HWND taskbar = FindWindowW(L"NoyaPlanetTaskbarPreviewV1", nullptr);
+      uiControlsPresent = uiControlsPresent && IsWindow(taskbar) &&
+          IsWindow(GetDlgItem(taskbar, 400));
+      if (IsWindow(taskbar)) DestroyWindow(taskbar);
+    }
     PostMessageW(window, WM_CLOSE, 0, 0);
   } else {
     ShowWindow(window, show);
