@@ -517,7 +517,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
         OpenPreview(hwnd);
         return 0;
       }
-      break;
+      return DefWindowProcW(hwnd, message, wParam, lParam);
     case WM_CLOSE:
       if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
       DestroyWindow(hwnd);
