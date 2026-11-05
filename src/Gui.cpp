@@ -7,6 +7,7 @@
 
 #include <windows.h>
 #include <shellapi.h>
+#include <objbase.h>
 
 #include <algorithm>
 #include <array>
