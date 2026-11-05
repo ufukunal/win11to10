@@ -4,7 +4,7 @@ A Windows 11 to Windows 10 appearance and performance project.
 
 **Store product:** NoyaPLANET 11to10. **Publisher:** NoyaPLANET.
 
-**Status: v0.4 development — native GUI, current-user startup controls, boot history and classic calendar preview.**
+**Status: v0.5 development — native GUI, optional docked appbar, Start preview, safe startup controls and boot history.**
 
 The native C++ utility is now paired with a Turkish Win32 graphical dashboard.
 The dashboard shows RAM/build details and offers confirmed, reversible effects
@@ -13,6 +13,11 @@ installed user/common Start Menu shortcuts. When the dashboard is open,
 Ctrl+Alt+S can open the preview if that global shortcut is available.
 Up to four Start menu preview tiles can be individually pinned and unpinned;
 their targets are persisted per user and only launched on a click.
+An optional **docked desktop appbar** is now available under Windows 10 görünümü.
+It uses documented Shell AppBar registration, reserves a small additional strip
+on the selected monitor, and restores it when closed. The existing Windows
+taskbar and notification area are **not hidden or replaced**. The user must
+explicitly confirm before enabling it. It never starts automatically.
 The taskbar preview lists and activates real windows on demand, and displays
 a native clock (refreshed only while preview is open). While the dashboard
 is open, a NoyaPLANET-owned tray icon offers a menu for the dashboard and
@@ -126,7 +131,7 @@ See docs/ROADMAP.md for planned interface and performance modules.
 
 ## Store package version
 
-The development MSIX manifest and native GUI file metadata use version `0.4.0.0`.
+The development MSIX manifest and native GUI file metadata use version `0.5.0.0`.
 The packaging artifact remains unsigned and is only suitable for testing and
 Partner Center submission preparation, not local installation.
 
@@ -149,3 +154,13 @@ features, not system replacements.
 - [Real Windows 11 QA, Store approval and trusted signing](https://github.com/ufukunal/win11to10/issues/4)
 
 **A passing GitHub Actions build is not Windows 11 desktop validation or Store approval.**
+
+### Optional desktop appbar controls (v0.5)
+
+Open `Windows 10 görünümü > Ek görev çubuğunu yerleştir (deneysel)`;
+confirm the prompt. `Kapat` on the bar, or `Windows 10 görünümü > Ek görev
+çubuğunu kaldır`, unregisters the appbar and releases its reserved screen area.
+Explorer restarts attempt re-registration, otherwise the bar closes safely.
+This is a real Windows desktop appbar, **not an Explorer taskbar replacement**.
+It has no independent system tray for third-party apps, and is not yet tested
+on real Windows 11 desktops. See [manual test plan](docs/WINDOWS11_TEST_PLAN.md).

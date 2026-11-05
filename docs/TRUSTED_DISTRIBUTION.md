@@ -47,7 +47,7 @@ are no longer necessary for these fields.
 Next steps for the owner:
 1. Complete any remaining Microsoft Partner Center account verification.
 2. Finish a Store-quality interface, metadata, screenshots and branding.
-   The v0.3 native dashboard and Start/taskbar previews are not yet a complete
+   The v0.5 native dashboard, optional appbar and Start/taskbar previews are not yet a complete
    product; interactive Windows 11 validation is still required.
 3. After code review and merging to main, manually run the
    "Prepare unsigned MSIX for Partner Center (MANUAL ONLY)" GitHub workflow.

@@ -11,6 +11,15 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
   native dashboard is running. The Windows key and built-in Start menu remain.
 - The taskbar preview enumerates visible windows and opens selected windows,
   displaying a clock. It does not replace or auto-hide Windows' own taskbar.
+- An additional optional docked Win32 **AppBar** can be enabled from the
+  dashboard with user confirmation. It reserves a thin area along a monitor's
+  bottom edge with SHAppBarMessage (ABM_NEW/QUERYPOS/SETPOS/REMOVE), displays
+  Start, selected windows and a clock, and releases the area on close.
+  Explorer restarts attempt to re-register; a failure closes it safely.
+  This is a documented desktop toolbar, **not** an implementation of the
+  real Windows taskbar and not a replacement for the notification area.
+  Multi-monitor/DPI behavior and fullscreen application behavior need testing.
+  The bar never enables itself at Windows startup.
 - The NoyaPLANET tray icon also opens an app-owned native calendar popup.
   Neither the calendar nor its menu replaces Windows' original flyouts.
 - The NoyaPLANET tray icon is the application's own notification-area icon.

@@ -641,7 +641,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       gDashboard.title = CreateLabel(hwnd, L"NoyaPLANET 11to10",
                                      gDashboard.titleFont);
       gDashboard.subtitle = CreateLabel(
-          hwnd, L"Türkçe kontrol paneli  •  v0.3 geliştirme sürümü\r\n"
+          hwnd, L"Türkçe kontrol paneli  •  v0.5 geliştirme sürümü\r\n"
                 L"Windows 11 altyapısı korunur. Başlat için Ctrl+Alt+S (uygunsa).",
           gDashboard.bodyFont);
       gDashboard.summary = CreateLabel(hwnd, L"Sistem bilgileri okunuyor...",

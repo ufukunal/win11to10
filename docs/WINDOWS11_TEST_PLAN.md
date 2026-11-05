@@ -32,6 +32,18 @@ compatibility with Windows 11 22H2/23H2/24H2 or later builds.
 - [ ] A click launches the selected app; no app runs automatically during scan.
 - [ ] Taskbar preview lists and activates visible windows without stealing focus
       until a user clicks one; updates time while open.
+- [ ] Enabling the optional docked bar requires explicit confirmation.
+- [ ] Docked bar reserves an additional strip without covering the actual
+      taskbar, taskbar flyouts or other docked appbars.
+- [ ] Docked Start opens the preview positioned above the additional bar.
+- [ ] Clicking docked window buttons activates the selected app; refresh is
+      user-triggered, not a continuously running enumeration timer.
+- [ ] Docked Kapat and menu removal release screen space immediately.
+- [ ] Restart Explorer: the bar either re-registers or closes safely.
+- [ ] Launch and close exclusive/fullscreen apps and check z-order recovery.
+- [ ] Move dashboard between primary and secondary monitors before docking;
+      check usable desktop space and no overlap at 100% and 150% DPI.
+- [ ] Closing the dashboard always unregisters and removes the optional bar.
 - [ ] Original taskbar, clock, tray icons, context menus and Explorer remain
       operational throughout; no injected code or shell replacement.
 - [ ] Closing the dashboard exits the process and releases any hotkeys.

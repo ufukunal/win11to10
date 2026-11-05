@@ -45,16 +45,25 @@ with optional visual effects disabled and font smoothing preserved.
 - Still missing: full Task Scheduler and packaged app coverage, quantified
   before/after speed improvement and real Windows 11 desktop tests.
 
-## v0.5 — Integrated Windows 10 Start menu
+## v0.5 — Optional real desktop appbar (implemented in development)
+- Explicitly confirmed edge-docked Win32 appbar through documented ABM_NEW,
+  ABM_QUERYPOS, ABM_SETPOS, ABM_REMOVE, and Explorer restart notifications.
+- Real window activation, on-demand refresh, local clock and Start preview.
+- Original Windows 11 taskbar is preserved, not replaced or hidden.
+- A user can remove the docked bar at any time; no startup service installed.
+- Still needs Windows 11 interactive tests, per-monitor DPI, fullscreen behavior
+  and shell restarts before a production claim.
+
+## v0.6 — Integrated Windows 10 Start menu
 - Native menu, keyboard navigation, installed app search and pinned apps.
 - DPI, accessibility, explorer restart and multimonitor compatibility tests.
 
-## v0.6 — Integrated taskbar and system tray
+## v0.7 — Integrated taskbar and system tray
 - Native taskbar controls and real window enumeration.
 - Preserve third-party tray interactions; avoid unsupported Explorer injection.
 - Strict Windows build compatibility matrix.
 
-## v0.7 — Explorer, Store readiness and signed distribution
+## v0.8 — Explorer, Store readiness and signed distribution
 - Supported classic Explorer presentation options.
 - Separate optional settings UI, closed when not in use.
 - Recovery path, tests and installer.
