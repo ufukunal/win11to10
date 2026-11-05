@@ -12,6 +12,7 @@
 #include "PinManager.h"
 
 #include <windows.h>
+#include <windowsx.h>
 #include <shellapi.h>
 #include <objbase.h>
 
