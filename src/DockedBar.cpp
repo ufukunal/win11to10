@@ -20,7 +20,8 @@ constexpr int kFirstWindow = 620;
 constexpr int kMaxWindows = 6;
 constexpr UINT kMenuRefresh = 1;
 constexpr UINT kMenuFirstWindow = 100;
-constexpr std::size_t kMaxMenuWindows = 100;
+constexpr std::size_t kWindowsPerMenu = 30;
+constexpr std::size_t kMaxMenuWindows = 1020;  // 34 bounded pages.
 constexpr int kHeight = 44;
 constexpr COLORREF kBackground = RGB(32, 32, 32);
 
@@ -135,20 +136,43 @@ void ShowAllWindowsMenu() {
   if (!menu) return;
   AppendMenuW(menu, MF_STRING, kMenuRefresh, L"Pencere listesini yenile");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  // TrackPopupMenu runs a nested message loop. A clock refresh can re-enumerate
-  // dock.listed while the menu is open, so keep the command-to-window map stable.
+
+  // A popup menu pumps a nested message loop: preserve the handle associated
+  // with each command even when timer refreshes run while the menu is open.
   const std::vector<HWND> menuWindows = dock.listed;
   const std::size_t count = std::min(menuWindows.size(), kMaxMenuWindows);
-  for (std::size_t i = 0; i < count; ++i) {
-    const std::wstring label = MenuTitle(menuWindows[i]);
-    const UINT id = WindowMenuCommand(i);
-    if (!label.empty() && id != 0)
-      AppendMenuW(menu, MF_STRING, id, label.c_str());
+  for (std::size_t first = 0; first < count; first += kWindowsPerMenu) {
+    HMENU page = CreatePopupMenu();
+    if (!page) break;
+    const std::size_t last = std::min(count, first + kWindowsPerMenu);
+    bool added = false;
+    for (std::size_t i = first; i < last; ++i) {
+      std::wstring label = MenuTitle(menuWindows[i]);
+      // '&' is a native menu accelerator marker; show literal app titles.
+      std::wstring escaped;
+      for (const wchar_t ch : label) {
+        escaped.push_back(ch);
+        if (ch == L'&') escaped.push_back(L'&');
+      }
+      const UINT id = WindowMenuCommand(i);
+      if (!escaped.empty() && id != 0 &&
+          AppendMenuW(page, MF_STRING, id, escaped.c_str()))
+        added = true;
+    }
+    if (!added) {
+      DestroyMenu(page);
+      continue;
+    }
+    const std::wstring pageName = L"Pencereler " +
+        std::to_wstring(first + 1) + L"–" + std::to_wstring(last);
+    if (!AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(page),
+                     pageName.c_str()))
+      DestroyMenu(page);  // Ownership transfers only after successful append.
   }
   if (menuWindows.size() > count) {
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING | MF_GRAYED, 0,
-                L"İlk 100 pencere gösteriliyor");
+                L"İlk 1020 pencere gösteriliyor");
   }
   RECT button{};
   GetWindowRect(dock.refresh, &button);
@@ -160,9 +184,9 @@ void ShowAllWindowsMenu() {
     UpdateWindows();
   } else if (choice >= kMenuFirstWindow &&
              choice < kMenuFirstWindow + count) {
-    const auto index = static_cast<std::size_t>(choice - kMenuFirstWindow);
+    const std::size_t index = static_cast<std::size_t>(choice - kMenuFirstWindow);
     if (index < menuWindows.size()) {
-      HWND chosen = menuWindows[index];
+      const HWND chosen = menuWindows[index];
       if (IsWindow(chosen)) {
         if (IsIconic(chosen)) ShowWindow(chosen, SW_RESTORE);
         SetForegroundWindow(chosen);
@@ -367,7 +391,9 @@ bool DockedBarLayoutSelfTest() {
          VisibleAppButtons(800) == 6 &&
          WindowMenuCommand(0) == kMenuFirstWindow &&
          WindowMenuCommand(99) == kMenuFirstWindow + 99 &&
-         WindowMenuCommand(100) == 0;
+         WindowMenuCommand(1019) == kMenuFirstWindow + 1019 &&
+         WindowMenuCommand(1020) == 0 &&
+         kMaxMenuWindows % kWindowsPerMenu == 0;
 }
 
 bool OpenDockedBar(HWND dashboard) {
