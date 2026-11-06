@@ -1,5 +1,6 @@
 #include "DockedBar.h"
 #include "TaskbarPreview.h"
+#include "ClassicCalendar.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -17,6 +18,7 @@ constexpr UINT kAppBarNotify = WM_APP + 92;
 constexpr int kStart = 610;
 constexpr int kRefresh = 611;
 constexpr int kClose = 612;
+constexpr int kClock = 613;
 constexpr int kFirstWindow = 620;
 constexpr int kMaxWindows = 6;
 constexpr UINT kMenuRefresh = 1;
@@ -310,11 +312,8 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       dock.start = Button(hwnd, kStart, L"Başlat");
       dock.refresh = Button(hwnd, kRefresh, L"Tümü");
       dock.close = Button(hwnd, kClose, L"Kapat");
-      dock.clock = CreateWindowExW(0, L"STATIC", L"",
-          WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX,
-          0, 0, 110, 36, hwnd, nullptr, GetModuleHandleW(nullptr), nullptr);
-      SendMessageW(dock.clock, WM_SETFONT,
-                   reinterpret_cast<WPARAM>(dock.font), TRUE);
+      // A real button supports mouse, keyboard and accessible naming.
+      dock.clock = Button(hwnd, kClock, L"Takvim");
       for (int i = 0; i < kMaxWindows; ++i)
         dock.apps[static_cast<std::size_t>(i)] =
             Button(hwnd, kFirstWindow+i, L"");
@@ -364,6 +363,8 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostMessageW(dock.dashboard, kRequestStartMenuPreview, 0, 0);
       } else if (LOWORD(wParam) == kRefresh) {
         ShowAllWindowsMenu();
+      } else if (LOWORD(wParam) == kClock) {
+        ShowClassicCalendarAt(dock.dashboard, dock.clock);
       } else if (LOWORD(wParam) == kClose) {
         DestroyWindow(hwnd);
       } else if (LOWORD(wParam) >= kFirstWindow &&
