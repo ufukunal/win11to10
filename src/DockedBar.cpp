@@ -38,6 +38,7 @@ struct Dock {
   std::array<HWND, kMaxWindows> apps{};
   std::vector<HWND> listed;
   int visibleSlots{};
+  UINT dpi = 96;
   HFONT font{};
   HBRUSH background{};
   bool registered = false;
@@ -46,6 +47,14 @@ struct Dock {
   RECT lastPosition{};
 };
 Dock dock;
+
+// All AppBar geometry is expressed in 96-DPI logical units. GetDpiForWindow
+// returns 96 for DPI-unaware hosts, avoiding incorrect double scaling.
+int Scale(int value, UINT dpi) {
+  return MulDiv(value, static_cast<int>(std::clamp(dpi, 72U, 480U)), 96);
+}
+
+int Px(int logical) { return Scale(logical, dock.dpi); }
 
 APPBARDATA Data(HWND hwnd) {
   APPBARDATA data{};
@@ -212,13 +221,13 @@ void UpdateClock() {
   SetWindowTextW(dock.clock, value);
 }
 
-int VisibleAppButtons(int width) {
-  constexpr int kLeft = 170;
-  constexpr int kRightControls = 119 + 60 + 16;
-  constexpr int kGap = 4;
-  constexpr int kMinButtonWidth = 64;
-  const int available = std::max(0, width - kRightControls - kLeft);
-  return std::clamp((available + kGap) / (kMinButtonWidth + kGap),
+int VisibleAppButtons(int width, UINT dpi) {
+  const int left = Scale(170, dpi);
+  const int rightControls = Scale(119 + 60 + 16, dpi);
+  const int gap = Scale(4, dpi);
+  const int minButtonWidth = Scale(64, dpi);
+  const int available = std::max(0, width - rightControls - left);
+  return std::clamp((available + gap) / (minButtonWidth + gap),
                     0, kMaxWindows);
 }
 
@@ -227,16 +236,16 @@ void PlaceChildren() {
   RECT rect{};
   GetClientRect(dock.hwnd, &rect);
   const int width = static_cast<int>(rect.right);
-  const int margin = 6;
-  MoveWindow(dock.start, margin, 5, 88, 34, TRUE);
-  MoveWindow(dock.refresh, 100, 5, 64, 34, TRUE);
-  const int clockWidth = 119;
-  const int closeWidth = 60;
-  const int left = 170;
-  const int rightLimit = width - clockWidth - closeWidth - 16;
+  const int top = std::max(0, (static_cast<int>(rect.bottom) - Px(34)) / 2);
+  MoveWindow(dock.start, Px(6), top, Px(88), Px(34), TRUE);
+  MoveWindow(dock.refresh, Px(100), top, Px(64), Px(34), TRUE);
+  const int clockWidth = Px(119);
+  const int closeWidth = Px(60);
+  const int left = Px(170);
+  const int rightLimit = width - clockWidth - closeWidth - Px(16);
   const int space = std::max(0, rightLimit - left);
-  const int gap = 4;
-  dock.visibleSlots = VisibleAppButtons(width);
+  const int gap = Px(4);
+  dock.visibleSlots = VisibleAppButtons(width, dock.dpi);
   const int buttonWidth = dock.visibleSlots > 0 ?
       (space - (dock.visibleSlots - 1) * gap) / dock.visibleSlots : 0;
   for (int i = 0; i < kMaxWindows; ++i) {
@@ -244,17 +253,18 @@ void PlaceChildren() {
     if (i >= dock.visibleSlots) {
       ShowWindow(button, SW_HIDE);
     } else {
-      MoveWindow(button, left + i * (buttonWidth + gap), 5,
-                 buttonWidth, 34, TRUE);
+      MoveWindow(button, left + i * (buttonWidth + gap), top,
+                 buttonWidth, Px(34), TRUE);
     }
   }
   // Prioritize Start and Close on very narrow or portrait displays.
   // The overflow menu remains available when there is room for its button.
-  ShowWindow(dock.refresh, width >= 270 ? SW_SHOWNA : SW_HIDE);
-  ShowWindow(dock.clock, width >= 360 ? SW_SHOWNA : SW_HIDE);
-  MoveWindow(dock.clock, width - clockWidth - closeWidth - 12, 5,
-             clockWidth, 34, TRUE);
-  MoveWindow(dock.close, width - closeWidth - 6, 5, closeWidth, 34, TRUE);
+  ShowWindow(dock.refresh, width >= Px(270) ? SW_SHOWNA : SW_HIDE);
+  ShowWindow(dock.clock, width >= Px(360) ? SW_SHOWNA : SW_HIDE);
+  MoveWindow(dock.clock, width - clockWidth - closeWidth - Px(12), top,
+             clockWidth, Px(34), TRUE);
+  MoveWindow(dock.close, width - closeWidth - Px(6), top,
+             closeWidth, Px(34), TRUE);
 }
 
 bool Position() {
@@ -267,14 +277,14 @@ bool Position() {
   monitorInfo.cbSize = sizeof(monitorInfo);
   if (!GetMonitorInfoW(monitor, &monitorInfo)) return false;
   // Start and Close must remain distinct, even on unusual tiny displays.
-  if (monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left < 160)
+  if (monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left < Px(160))
     return false;
   APPBARDATA data = Data(dock.hwnd);
   data.uEdge = ABE_BOTTOM;
   data.rc = monitorInfo.rcMonitor;
-  data.rc.top = data.rc.bottom - kHeight;
+  data.rc.top = data.rc.bottom - Px(kHeight);
   if (!SHAppBarMessage(ABM_QUERYPOS, &data)) return false;
-  data.rc.top = data.rc.bottom - kHeight;
+  data.rc.top = data.rc.bottom - Px(kHeight);
   if (dock.hasPosition && EqualRect(&dock.lastPosition, &data.rc)) return true;
   dock.positioning = true;
   const bool reserved = SHAppBarMessage(ABM_SETPOS, &data) != 0;
@@ -304,7 +314,8 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
   switch (message) {
     case WM_CREATE: {
       dock.hwnd = hwnd;
-      dock.font = CreateFontW(-16, 0, 0, 0, FW_NORMAL, FALSE,
+      dock.dpi = GetDpiForWindow(hwnd);
+      dock.font = CreateFontW(-Px(16), 0, 0, 0, FW_NORMAL, FALSE,
           FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
           CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
           DEFAULT_PITCH, L"Segoe UI");
@@ -331,6 +342,30 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       PlaceChildren();
       UpdateWindows();
       return 0;
+    case WM_DPICHANGED: {
+      const UINT newDpi = HIWORD(wParam);
+      if (newDpi == dock.dpi || newDpi == 0) return 0;
+      dock.dpi = newDpi;
+      HFONT newFont = CreateFontW(-Px(16), 0, 0, 0, FW_NORMAL,
+          FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+          CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+          DEFAULT_PITCH, L"Segoe UI");
+      if (newFont) {
+        for (HWND control : {dock.start, dock.refresh, dock.close, dock.clock})
+          if (IsWindow(control)) SendMessageW(control, WM_SETFONT,
+                                              reinterpret_cast<WPARAM>(newFont), TRUE);
+        for (HWND control : dock.apps)
+          if (IsWindow(control)) SendMessageW(control, WM_SETFONT,
+                                              reinterpret_cast<WPARAM>(newFont), TRUE);
+        if (dock.font) DeleteObject(dock.font);
+        dock.font = newFont;
+      }
+      dock.hasPosition = false;
+      if (!Position()) PostMessageW(hwnd, WM_CLOSE, 0, 0);
+      PlaceChildren();
+      UpdateWindows();
+      return 0;
+    }
     case WM_MOUSEACTIVATE:
       // Keep the application window in front when a taskbar button is clicked.
       // Otherwise the dock steals foreground focus before WM_COMMAND arrives.
@@ -399,10 +434,15 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 }  // namespace
 
 bool DockedBarLayoutSelfTest() {
-  return VisibleAppButtons(160) == 0 &&
-         VisibleAppButtons(360) == 0 &&
-         VisibleAppButtons(500) == 2 &&
-         VisibleAppButtons(800) == 6 &&
+  return VisibleAppButtons(160, 96) == 0 &&
+         VisibleAppButtons(360, 96) == 0 &&
+         VisibleAppButtons(500, 96) == 2 &&
+         VisibleAppButtons(800, 96) == 6 &&
+         VisibleAppButtons(750, 144) == 2 &&
+         VisibleAppButtons(1200, 144) == 6 &&
+         Scale(44, 96) == 44 &&
+         Scale(44, 144) == 66 &&
+         Scale(44, 192) == 88 &&
          WindowMenuCommand(0) == kMenuFirstWindow &&
          WindowMenuCommand(99) == kMenuFirstWindow + 99 &&
          WindowMenuCommand(1019) == kMenuFirstWindow + 1019 &&
@@ -432,7 +472,8 @@ bool OpenDockedBar(HWND dashboard) {
   dock.dashboard = dashboard;
   HWND hwnd = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
       kClass, L"NoyaPLANET 11to10 — ek görev çubuğu",
-      WS_POPUP | WS_VISIBLE, 0, 0, 900, kHeight,
+      WS_POPUP | WS_VISIBLE, 0, 0, 900,
+      Scale(kHeight, GetDpiForWindow(dashboard)),
       dashboard, nullptr, module, nullptr);
   return IsWindow(hwnd) && dock.registered;
 }
