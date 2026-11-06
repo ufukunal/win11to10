@@ -842,17 +842,34 @@ void OpenPreview(HWND owner) {
   GetWindowRect(owner, &parent);
   int x = parent.left + 56;
   int y = parent.top + 30;
+  HWND anchor = owner;
   if (HWND docked = noya::DockedBarWindow()) {
     RECT bar{};
     GetWindowRect(docked, &bar);
-    // Place the Start preview immediately above our optional docked bar.
+    // Place the Start preview above our own optional docked bar.
     x = bar.left + 8;
-    y = std::max(0L, bar.top - 610L);
+    y = bar.top - 610;
+    anchor = docked;
+  }
+  int width = 720;
+  int height = 600;
+  MONITORINFO monitorInfo{};
+  monitorInfo.cbSize = sizeof(monitorInfo);
+  const HMONITOR monitor = MonitorFromWindow(anchor, MONITOR_DEFAULTTONEAREST);
+  if (GetMonitorInfoW(monitor, &monitorInfo)) {
+    const RECT& work = monitorInfo.rcWork;
+    width = std::min(width, static_cast<int>(work.right - work.left));
+    height = std::min(height, static_cast<int>(work.bottom - work.top));
+    if (width <= 0 || height <= 0) return;
+    x = std::clamp(x, static_cast<int>(work.left),
+                   static_cast<int>(work.right) - width);
+    y = std::clamp(y, static_cast<int>(work.top),
+                   static_cast<int>(work.bottom) - height);
   }
   HWND preview = CreateWindowExW(
       WS_EX_APPWINDOW, kStartClass, L"NoyaPLANET 11to10 - Başlat menüsü önizlemesi",
       WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-      x, y, 720, 600, owner, nullptr, GetModuleHandleW(nullptr), nullptr);
+      x, y, width, height, owner, nullptr, GetModuleHandleW(nullptr), nullptr);
   if (preview) ShowWindow(preview, SW_SHOWNORMAL);
 }
 
