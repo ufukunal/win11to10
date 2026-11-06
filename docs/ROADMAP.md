@@ -21,6 +21,8 @@ anımsatan bir masaüstü deneyimi. "Tam kabuk değişimi" ile "bağımsız
   önbelleği ve yenileme, klavye gezinmesi, Türkçe büyük/küçük harf araması,
   altı otomatik test ve genişletilmiş arayüz bileşeni smoke testi.
 
+- **v0.7 geliştirme güncellemesi:** HKCU/HKLM StartupApproved Run kayıtlarının salt okunur durumları ve bilinmeyen kayıt türleri için güvenli sınıflandırma testleri. Bu durum, gerçek açılışta çalışmayı garanti etmez.
+
 ## Ürün tamamlandı denmeden önce
 
 1. **Gerçek kabuk entegrasyonu:** Windows'un orijinal Başlat/görev
