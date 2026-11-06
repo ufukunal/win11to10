@@ -66,6 +66,7 @@ constexpr int kAppList = 202;
 constexpr int kPinSelected = 203;
 constexpr int kUnpinSelected = 204;
 constexpr int kRefreshInstalledApps = 205;
+constexpr int kCloseStart = 206;
 constexpr int kTileBase = 300;
 
 struct Dashboard {
@@ -104,6 +105,8 @@ struct StartPreview {
   HWND tilesLabel{};
   HWND tiles[4]{};
   HWND taskbarNote{};
+  HWND close{};
+  bool contextMenuOpen = false;
   std::vector<std::size_t> visible;
   std::vector<PreviewItem> allApps;
   std::vector<std::wstring> pinnedTargets;
@@ -654,7 +657,8 @@ void LayoutPreview(HWND hwnd) {
   const int listWidth = std::max(200, usable / 2 - 10);
   const int tileX = 28 + listWidth;
   const int tileWidth = std::max(170, usable - listWidth - 12);
-  Place(gPreview.title, 22, 14, usable, 43);
+  Place(gPreview.title, 22, 14, std::max(100, usable - 75), 43);
+  Place(gPreview.close, std::max(0, width - 93), 14, 70, 34);
   Place(gPreview.note, 23, 60, usable, 44);
   Place(gPreview.searchLabel, 22, 115, listWidth, 26);
   Place(gPreview.search, 22, 145, listWidth, 32);
@@ -680,12 +684,14 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
       gPreview.window = hwnd;
       gPreview.bodyFont = MakeFont(-18, false);
       gPreview.titleFont = MakeFont(-29, true);
-      gPreview.title = CreateLabel(hwnd, L"Başlat  |  Windows 10 önizlemesi",
+      gPreview.title = CreateLabel(hwnd, L"NoyaPLANET Başlat",
                                    gPreview.titleFont);
       gPreview.note = CreateLabel(
-          hwnd, L"Bu pencere gerçek Başlat menüsünün yerine geçmez.\r\n"
-                L"Arama ve uygulama başlatma davranışları çalışır.",
+          hwnd, L"Windows Başlat menüsü korunur. Uygulama seçin veya arayın.\r\n"
+                L"Esc, Kapat veya dışarı tıklayarak bu menüyü kapatın.",
           gPreview.bodyFont);
+      gPreview.close = CreateButton(hwnd, L"Kapat", kCloseStart,
+                                     gPreview.bodyFont);
       gPreview.searchLabel = CreateLabel(hwnd, L"Uygulama ara:", gPreview.bodyFont);
       gPreview.search = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
                          WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
@@ -756,6 +762,8 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
         ChangePinnedSelection(false);
       } else if (id == kRefreshInstalledApps && HIWORD(wParam) == BN_CLICKED) {
         RefreshStartIndex(true);
+      } else if (id == kCloseStart && HIWORD(wParam) == BN_CLICKED) {
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
       } else if (id >= kTileBase && id < kTileBase + 4 && HIWORD(wParam) == BN_CLICKED) {
         const auto pinnedIndex = static_cast<std::size_t>(id - kTileBase);
         if (pinnedIndex < gPreview.pinnedTargets.size()) {
@@ -816,9 +824,11 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
       AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
       AppendMenuW(menu, MF_STRING, 2, L"Başlat'a sabitle");
       AppendMenuW(menu, MF_STRING, 3, L"Sabitlemeyi kaldır");
+      gPreview.contextMenuOpen = true;
       const int chosen = TrackPopupMenu(menu,
           TPM_RETURNCMD | TPM_RIGHTBUTTON,
           at.x, at.y, 0, hwnd, nullptr);
+      gPreview.contextMenuOpen = false;
       DestroyMenu(menu);
       if (chosen == 1 &&
           static_cast<std::size_t>(selected) < gPreview.visible.size()) {
@@ -831,6 +841,18 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
       }
       return 0;
     }
+    case WM_ACTIVATE:
+      // Native Start-style flyout: dismiss on outside activation.
+      // Do not close while its own context menu pumps a nested message loop.
+      if (LOWORD(wParam) == WA_INACTIVE && !gPreview.contextMenuOpen)
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+      return 0;
+    case WM_KEYDOWN:
+      if (wParam == VK_ESCAPE) {
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+        return 0;
+      }
+      break;
     case WM_CTLCOLORSTATIC: {
       HDC dc = reinterpret_cast<HDC>(wParam);
       SetTextColor(dc, kForeground);
@@ -901,12 +923,16 @@ void OpenPreview(HWND owner) {
   monitorInfo.cbSize = sizeof(monitorInfo);
   const HMONITOR monitor = MonitorFromWindow(anchor, MONITOR_DEFAULTTONEAREST);
   if (GetMonitorInfoW(monitor, &monitorInfo)) {
+    if (!noya::DockedBarWindow()) {
+      x = monitorInfo.rcWork.left + 8;
+      y = monitorInfo.rcWork.bottom - height - 8;
+    }
     if (!FitPreviewToWorkArea(monitorInfo.rcWork, x, y, width, height))
       return;
   }
   HWND preview = CreateWindowExW(
-      WS_EX_APPWINDOW, kStartClass, L"NoyaPLANET 11to10 - Başlat menüsü önizlemesi",
-      WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+      WS_EX_TOOLWINDOW, kStartClass, L"NoyaPLANET Başlat",
+      WS_POPUP | WS_BORDER | WS_VISIBLE,
       x, y, width, height, owner, nullptr, GetModuleHandleW(nullptr), nullptr);
   if (preview) {
     ShowWindow(preview, SW_SHOWNORMAL);
@@ -1230,6 +1256,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
       // enumeration, Start controls, native file browser, and calendar.
       OpenPreview(window);
       uiControlsPresent = IsWindow(gPreview.window) &&
+          (GetWindowLongPtrW(gPreview.window, GWL_STYLE) & WS_POPUP) != 0 &&
+          IsWindow(gPreview.close) &&
           IsWindow(gPreview.search) && IsWindow(gPreview.appList) &&
           SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) >= 6;
       if (uiControlsPresent) {
