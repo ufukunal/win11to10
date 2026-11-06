@@ -39,6 +39,13 @@ simgeleri ve sistem Dosya Gezgini Windows tarafından yönetilmeye devam eder.
 - **Başlangıç yönetimi:** Mevcut kullanıcı için HKCU Run girdilerini yalnızca
   onayla ve özgün kayıt değerini saklayarak devre dışı bırakma/geri yükleme.
   Diğer başlangıç kaynakları ve Windows servisleri salt okunur incelenir.
+- **İsteğe bağlı oturum açılışında başlatma:** Sistem araçları menüsündeki
+  seçenek, yalnızca kullanıcının açık onayıyla NoyaPLANET kontrol paneli
+  için HKCU Run kaydı ekler. Aynı adlı başka bir kayıt varsa üzerine yazmaz;
+  kaldırırken yalnızca kendi çalıştırılabilir dosya yoluyla eşleşen kaydı
+  siler. Windows 10 görünümünü oturum açılışında otomatik etkinleştirmez.
+  Uygulamanın konumu değişirse eski kayıt Windows Başlangıç ayarlarından
+  kaldırılmalıdır.
 - **Açılış ölçümleri:** Windows Diagnostics-Performance Event 100 geçmişi ve
   onaylı bir başlangıç medyanıyla en az üç yeni açılış arasında karşılaştırma.
   Ölçüm sonucu, programın hız kazandırdığının tek başına kanıtı değildir.
