@@ -833,6 +833,34 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
   }
 }
 
+bool FitPreviewToWorkArea(const RECT& work, int& x, int& y,
+                          int& width, int& height) {
+  if (work.right <= work.left || work.bottom <= work.top ||
+      width <= 0 || height <= 0) return false;
+  width = std::min(width, static_cast<int>(work.right - work.left));
+  height = std::min(height, static_cast<int>(work.bottom - work.top));
+  x = std::clamp(x, static_cast<int>(work.left),
+                 static_cast<int>(work.right) - width);
+  y = std::clamp(y, static_cast<int>(work.top),
+                 static_cast<int>(work.bottom) - height);
+  return true;
+}
+
+bool PreviewPlacementSelfTest() {
+  int x = -1700, y = -100, width = 720, height = 600;
+  if (!FitPreviewToWorkArea(RECT{-1920, -1080, 0, 0},
+                            x, y, width, height) ||
+      x != -1700 || y != -600 || width != 720 || height != 600)
+    return false;
+  x = 900; y = 900; width = 720; height = 600;
+  if (!FitPreviewToWorkArea(RECT{0, 0, 640, 480},
+                            x, y, width, height) ||
+      x != 0 || y != 0 || width != 640 || height != 480)
+    return false;
+  return !FitPreviewToWorkArea(RECT{0, 0, 0, 0},
+                               x, y, width, height);
+}
+
 void OpenPreview(HWND owner) {
   if (IsWindow(gPreview.window)) {
     SetForegroundWindow(gPreview.window);
@@ -857,14 +885,8 @@ void OpenPreview(HWND owner) {
   monitorInfo.cbSize = sizeof(monitorInfo);
   const HMONITOR monitor = MonitorFromWindow(anchor, MONITOR_DEFAULTTONEAREST);
   if (GetMonitorInfoW(monitor, &monitorInfo)) {
-    const RECT& work = monitorInfo.rcWork;
-    width = std::min(width, static_cast<int>(work.right - work.left));
-    height = std::min(height, static_cast<int>(work.bottom - work.top));
-    if (width <= 0 || height <= 0) return;
-    x = std::clamp(x, static_cast<int>(work.left),
-                   static_cast<int>(work.right) - width);
-    y = std::clamp(y, static_cast<int>(work.top),
-                   static_cast<int>(work.bottom) - height);
+    if (!FitPreviewToWorkArea(monitorInfo.rcWork, x, y, width, height))
+      return;
   }
   HWND preview = CreateWindowExW(
       WS_EX_APPWINDOW, kStartClass, L"NoyaPLANET 11to10 - Başlat menüsü önizlemesi",
@@ -1067,7 +1089,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::PackagedAppsModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
+    return PreviewPlacementSelfTest() && noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::PackagedAppsModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
   }
   // UI smoke test checks real window/control creation and normal teardown
   // without applying settings or opening other apps.
