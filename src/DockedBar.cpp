@@ -33,6 +33,9 @@ struct Dock {
   HFONT font{};
   HBRUSH background{};
   bool registered = false;
+  bool positioning = false;
+  bool hasPosition = false;
+  RECT lastPosition{};
 };
 Dock dock;
 
@@ -129,6 +132,7 @@ void PlaceChildren() {
 
 bool Position() {
   if (!dock.registered || !IsWindow(dock.hwnd)) return false;
+  if (dock.positioning) return true;  // ABM_SETPOS can notify this appbar.
   // Use the monitor hosting the owner. Do not modify the Windows taskbar;
   // ABM_QUERYPOS handles existing system appbars and keeps their area.
   HMONITOR monitor = MonitorFromWindow(dock.dashboard, MONITOR_DEFAULTTOPRIMARY);
@@ -141,11 +145,19 @@ bool Position() {
   data.rc.top = data.rc.bottom - kHeight;
   if (!SHAppBarMessage(ABM_QUERYPOS, &data)) return false;
   data.rc.top = data.rc.bottom - kHeight;
-  if (!SHAppBarMessage(ABM_SETPOS, &data)) return false;
-  return SetWindowPos(dock.hwnd, HWND_TOPMOST,
+  if (dock.hasPosition && EqualRect(&dock.lastPosition, &data.rc)) return true;
+  dock.positioning = true;
+  const bool reserved = SHAppBarMessage(ABM_SETPOS, &data) != 0;
+  const bool placed = reserved && SetWindowPos(dock.hwnd, HWND_TOPMOST,
                data.rc.left, data.rc.top,
-               data.rc.right-data.rc.left, data.rc.bottom-data.rc.top,
+               data.rc.right - data.rc.left, data.rc.bottom - data.rc.top,
                SWP_NOACTIVATE | SWP_SHOWWINDOW) != FALSE;
+  if (placed) {
+    dock.lastPosition = data.rc;
+    dock.hasPosition = true;
+  }
+  dock.positioning = false;
+  return placed;
 }
 
 LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -197,6 +209,7 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       return MA_NOACTIVATE;
     case WM_DISPLAYCHANGE:
       // Monitor topology can change after docking. Release the appbar on failure.
+      dock.hasPosition = false;
       if (!Position()) PostMessageW(hwnd, WM_CLOSE, 0, 0);
       return 0;
     case WM_ACTIVATE: {
@@ -297,6 +310,7 @@ bool IsDockedBarOpen() { return IsWindow(dock.hwnd) && dock.registered; }
 HWND DockedBarWindow() { return IsDockedBarOpen() ? dock.hwnd : nullptr; }
 void OnDockedBarExplorerRestart() {
   if (!IsWindow(dock.hwnd)) return;
+  dock.hasPosition = false;
   auto data = Data(dock.hwnd);
   data.uCallbackMessage = kAppBarNotify;
   dock.registered = SHAppBarMessage(ABM_NEW, &data) != 0;
