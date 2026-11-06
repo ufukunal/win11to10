@@ -8,6 +8,8 @@ struct StartupInventory {
   std::vector<std::wstring> allUsersRun;
   std::vector<std::wstring> currentUserShortcuts;
   std::vector<std::wstring> allUsersShortcuts;
+  std::vector<std::wstring> currentUserApprovedRun;
+  std::vector<std::wstring> allUsersApprovedRun;
   std::wstring diagnostics;
 };
 // Read-only inventory. "Registered" does not mean "enabled at boot".

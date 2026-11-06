@@ -288,9 +288,13 @@ void ShowStartupInventoryReport(HWND owner) {
   };
   append(L"HKCU Run", report.currentUserRun);
   append(L"HKLM Run", report.allUsersRun);
+  append(L"HKCU StartupApproved Run (bildirilen durum)", report.currentUserApprovedRun);
+  append(L"HKLM StartupApproved Run (bildirilen durum)", report.allUsersApprovedRun);
   append(L"Kullanıcı Başlangıç klasörü", report.currentUserShortcuts);
   append(L"Ortak Başlangıç klasörü", report.allUsersShortcuts);
-  out << L"Kayıtlı olması otomatik çalıştığı anlamına gelmez.\r\n"
+  out << L"StartupApproved durumları yalnızca kayıtlı Windows işaretleridir; "
+         L"görevin gerçekten çalışacağını garanti etmez.\r\n"
+         L"Kayıtlı olması otomatik çalıştığı anlamına gelmez.\r\n"
          L"Programları kapatmak için Başlangıç Yöneticisini kullanın.\r\n";
   if (!report.diagnostics.empty()) out << report.diagnostics;
   MessageBoxW(owner, out.str().c_str(), L"Başlangıç envanteri", MB_OK);
