@@ -18,6 +18,9 @@ constexpr int kRefresh = 611;
 constexpr int kClose = 612;
 constexpr int kFirstWindow = 620;
 constexpr int kMaxWindows = 6;
+constexpr UINT kMenuRefresh = 1;
+constexpr UINT kMenuFirstWindow = 100;
+constexpr std::size_t kMaxMenuWindows = 100;
 constexpr int kHeight = 44;
 constexpr COLORREF kBackground = RGB(32, 32, 32);
 
@@ -93,6 +96,74 @@ void UpdateWindows() {
       const auto text = Title(dock.listed[index]);
       SetWindowTextW(dock.apps[index], text.c_str());
       ShowWindow(dock.apps[index], SW_SHOWNA);
+    }
+  }
+}
+
+void ActivateWindow(HWND chosen) {
+  if (!IsWindow(chosen)) return;
+  if (GetForegroundWindow() == chosen && !IsIconic(chosen))
+    ShowWindow(chosen, SW_MINIMIZE);
+  else {
+    if (IsIconic(chosen)) ShowWindow(chosen, SW_RESTORE);
+    SetForegroundWindow(chosen);
+  }
+}
+
+std::wstring MenuTitle(HWND hwnd) {
+  const int length = GetWindowTextLengthW(hwnd);
+  if (length <= 0 || length > 65535) return L"";
+  std::wstring value(static_cast<std::size_t>(length) + 1, L'\0');
+  const int copied = GetWindowTextW(hwnd, value.data(), length + 1);
+  if (copied <= 0) return L"";
+  value.resize(static_cast<std::size_t>(copied));
+  if (value.size() > 76) {
+    value.resize(75);
+    value += L"…";
+  }
+  return value;
+}
+
+UINT WindowMenuCommand(std::size_t index) {
+  return index < kMaxMenuWindows ?
+      kMenuFirstWindow + static_cast<UINT>(index) : 0;
+}
+
+void ShowAllWindowsMenu() {
+  UpdateWindows();
+  HMENU menu = CreatePopupMenu();
+  if (!menu) return;
+  AppendMenuW(menu, MF_STRING, kMenuRefresh, L"Pencere listesini yenile");
+  AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+  const std::size_t count = std::min(dock.listed.size(), kMaxMenuWindows);
+  for (std::size_t i = 0; i < count; ++i) {
+    const std::wstring label = MenuTitle(dock.listed[i]);
+    const UINT id = WindowMenuCommand(i);
+    if (!label.empty() && id != 0)
+      AppendMenuW(menu, MF_STRING, id, label.c_str());
+  }
+  if (dock.listed.size() > count) {
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(menu, MF_STRING | MF_GRAYED, 0,
+                L"İlk 100 pencere gösteriliyor");
+  }
+  RECT button{};
+  GetWindowRect(dock.refresh, &button);
+  const UINT choice = TrackPopupMenu(menu,
+      TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_BOTTOMALIGN,
+      button.left, button.top, 0, dock.hwnd, nullptr);
+  DestroyMenu(menu);
+  if (choice == kMenuRefresh) {
+    UpdateWindows();
+  } else if (choice >= kMenuFirstWindow &&
+             choice < kMenuFirstWindow + count) {
+    const auto index = static_cast<std::size_t>(choice - kMenuFirstWindow);
+    if (index < dock.listed.size()) {
+      HWND chosen = dock.listed[index];
+      if (IsWindow(chosen)) {
+        if (IsIconic(chosen)) ShowWindow(chosen, SW_RESTORE);
+        SetForegroundWindow(chosen);
+      }
     }
   }
 }
@@ -198,7 +269,7 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
           DEFAULT_PITCH, L"Segoe UI");
       dock.background = CreateSolidBrush(kBackground);
       dock.start = Button(hwnd, kStart, L"Başlat");
-      dock.refresh = Button(hwnd, kRefresh, L"Yenile");
+      dock.refresh = Button(hwnd, kRefresh, L"Tümü");
       dock.close = Button(hwnd, kClose, L"Kapat");
       dock.clock = CreateWindowExW(0, L"STATIC", L"",
           WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX,
@@ -253,22 +324,14 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       if (LOWORD(wParam) == kStart) {
         PostMessageW(dock.dashboard, kRequestStartMenuPreview, 0, 0);
       } else if (LOWORD(wParam) == kRefresh) {
-        UpdateWindows();
+        ShowAllWindowsMenu();
       } else if (LOWORD(wParam) == kClose) {
         DestroyWindow(hwnd);
       } else if (LOWORD(wParam) >= kFirstWindow &&
                  LOWORD(wParam) < kFirstWindow + kMaxWindows) {
         const auto index = static_cast<std::size_t>(LOWORD(wParam)-kFirstWindow);
         if (index < dock.listed.size() && IsWindow(dock.listed[index])) {
-          auto chosen = dock.listed[index];
-          // Windows 10 taskbar convention: clicking the foreground window
-          // minimizes it; clicking a minimized or background window activates it.
-          if (GetForegroundWindow() == chosen && !IsIconic(chosen)) {
-            ShowWindow(chosen, SW_MINIMIZE);
-          } else {
-            if (IsIconic(chosen)) ShowWindow(chosen, SW_RESTORE);
-            SetForegroundWindow(chosen);
-          }
+          ActivateWindow(dock.listed[index]);
         }
       }
       return 0;
@@ -298,7 +361,10 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 bool DockedBarLayoutSelfTest() {
   return VisibleAppButtons(360) == 0 &&
          VisibleAppButtons(500) == 2 &&
-         VisibleAppButtons(800) == 6;
+         VisibleAppButtons(800) == 6 &&
+         WindowMenuCommand(0) == kMenuFirstWindow &&
+         WindowMenuCommand(99) == kMenuFirstWindow + 99 &&
+         WindowMenuCommand(100) == 0;
 }
 
 bool OpenDockedBar(HWND dashboard) {
