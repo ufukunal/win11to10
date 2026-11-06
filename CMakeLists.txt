@@ -20,9 +20,9 @@ target_link_libraries(Win11To10 PRIVATE user32 advapi32)
 add_library(StartMenuModel STATIC src/StartMenuModel.cpp src/TurkishSearch.cpp)
 target_include_directories(StartMenuModel PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-add_executable(NoyaPLANET11to10 WIN32 src/Gui.cpp src/TaskbarPreview.cpp src/DockedBar.cpp src/ClassicFileBrowser.cpp src/StartupManager.cpp src/StartupWindow.cpp src/InstalledApps.cpp src/PackagedApps.cpp src/BootMetrics.cpp src/BootHistory.cpp src/BootComparison.cpp src/StartupInventory.cpp src/ServiceInventory.cpp src/PinManager.cpp src/ClassicCalendar.cpp src/TrayHost.cpp resources/AppVersion.rc)
+add_executable(NoyaPLANET11to10 WIN32 src/Gui.cpp src/TaskbarPreview.cpp src/DockedBar.cpp src/ClassicFileBrowser.cpp src/StartupManager.cpp src/StartupWindow.cpp src/InstalledApps.cpp src/PackagedApps.cpp src/BootMetrics.cpp src/BootHistory.cpp src/BootComparison.cpp src/StartupInventory.cpp src/ScheduledStartup.cpp src/ServiceInventory.cpp src/PinManager.cpp src/ClassicCalendar.cpp src/TrayHost.cpp resources/AppVersion.rc)
 target_compile_definitions(NoyaPLANET11to10 PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
-target_link_libraries(NoyaPLANET11to10 PRIVATE StartMenuModel user32 gdi32 shell32 advapi32 wevtapi ole32 uuid comctl32)
+target_link_libraries(NoyaPLANET11to10 PRIVATE StartMenuModel user32 gdi32 shell32 advapi32 wevtapi ole32 oleaut32 taskschd uuid comctl32)
 
 if(MSVC)
   foreach(target Win11To10 NoyaPLANET11to10 StartMenuModel)
