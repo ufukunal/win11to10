@@ -246,6 +246,10 @@ void PlaceChildren() {
                  buttonWidth, 34, TRUE);
     }
   }
+  // Prioritize Start and Close on very narrow or portrait displays.
+  // The overflow menu remains available when there is room for its button.
+  ShowWindow(dock.refresh, width >= 270 ? SW_SHOWNA : SW_HIDE);
+  ShowWindow(dock.clock, width >= 360 ? SW_SHOWNA : SW_HIDE);
   MoveWindow(dock.clock, width - clockWidth - closeWidth - 12, 5,
              clockWidth, 34, TRUE);
   MoveWindow(dock.close, width - closeWidth - 6, 5, closeWidth, 34, TRUE);
@@ -260,6 +264,9 @@ bool Position() {
   MONITORINFO monitorInfo{};
   monitorInfo.cbSize = sizeof(monitorInfo);
   if (!GetMonitorInfoW(monitor, &monitorInfo)) return false;
+  // Start and Close must remain distinct, even on unusual tiny displays.
+  if (monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left < 160)
+    return false;
   APPBARDATA data = Data(dock.hwnd);
   data.uEdge = ABE_BOTTOM;
   data.rc = monitorInfo.rcMonitor;
@@ -391,7 +398,8 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 }  // namespace
 
 bool DockedBarLayoutSelfTest() {
-  return VisibleAppButtons(360) == 0 &&
+  return VisibleAppButtons(160) == 0 &&
+         VisibleAppButtons(360) == 0 &&
          VisibleAppButtons(500) == 2 &&
          VisibleAppButtons(800) == 6 &&
          WindowMenuCommand(0) == kMenuFirstWindow &&
