@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace noya {
@@ -130,6 +131,15 @@ UINT WindowMenuCommand(std::size_t index) {
       kMenuFirstWindow + static_cast<UINT>(index) : 0;
 }
 
+std::wstring EscapeMenuLabel(std::wstring_view title) {
+  std::wstring escaped;
+  for (const wchar_t ch : title) {
+    escaped.push_back(ch);
+    if (ch == L'&') escaped.push_back(L'&');
+  }
+  return escaped;
+}
+
 void ShowAllWindowsMenu() {
   UpdateWindows();
   HMENU menu = CreatePopupMenu();
@@ -147,13 +157,8 @@ void ShowAllWindowsMenu() {
     const std::size_t last = std::min(count, first + kWindowsPerMenu);
     bool added = false;
     for (std::size_t i = first; i < last; ++i) {
-      std::wstring label = MenuTitle(menuWindows[i]);
       // '&' is a native menu accelerator marker; show literal app titles.
-      std::wstring escaped;
-      for (const wchar_t ch : label) {
-        escaped.push_back(ch);
-        if (ch == L'&') escaped.push_back(L'&');
-      }
+      const std::wstring escaped = EscapeMenuLabel(MenuTitle(menuWindows[i]));
       const UINT id = WindowMenuCommand(i);
       if (!escaped.empty() && id != 0 &&
           AppendMenuW(page, MF_STRING, id, escaped.c_str()))
@@ -393,7 +398,9 @@ bool DockedBarLayoutSelfTest() {
          WindowMenuCommand(99) == kMenuFirstWindow + 99 &&
          WindowMenuCommand(1019) == kMenuFirstWindow + 1019 &&
          WindowMenuCommand(1020) == 0 &&
-         kMaxMenuWindows % kWindowsPerMenu == 0;
+         kMaxMenuWindows % kWindowsPerMenu == 0 &&
+         EscapeMenuLabel(L"Save & Exit") == L"Save && Exit" &&
+         EscapeMenuLabel(L"") == L"";
 }
 
 bool OpenDockedBar(HWND dashboard) {
