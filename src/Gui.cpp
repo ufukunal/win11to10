@@ -11,6 +11,7 @@
 #include "BootHistory.h"
 #include "BootComparison.h"
 #include "StartupInventory.h"
+#include "ScheduledStartup.h"
 #include "ServiceInventory.h"
 #include "TrayHost.h"
 #include "ClassicCalendar.h"
@@ -292,6 +293,11 @@ void ShowStartupInventoryReport(HWND owner) {
   append(L"HKLM StartupApproved Run (bildirilen durum)", report.allUsersApprovedRun);
   append(L"Kullanıcı Başlangıç klasörü", report.currentUserShortcuts);
   append(L"Ortak Başlangıç klasörü", report.allUsersShortcuts);
+  const auto scheduled = noya::ScanScheduledStartup();
+  append(L"Görev Zamanlayıcı açılış/oturum görevleri (salt okunur)",
+         scheduled.entries);
+  if (!scheduled.diagnostics.empty())
+    out << scheduled.diagnostics << L"\r\n";
   out << L"StartupApproved durumları yalnızca kayıtlı Windows işaretleridir; "
          L"görevin gerçekten çalışacağını garanti etmez.\r\n"
          L"Kayıtlı olması otomatik çalıştığı anlamına gelmez.\r\n"
@@ -1093,7 +1099,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return PreviewPlacementSelfTest() && noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::PackagedAppsModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
+    return PreviewPlacementSelfTest() && noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::PackagedAppsModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::ScheduledStartupModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
   }
   // UI smoke test checks real window/control creation and normal teardown
   // without applying settings or opening other apps.
