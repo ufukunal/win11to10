@@ -873,7 +873,9 @@ bool PreviewPlacementSelfTest() {
 
 void OpenPreview(HWND owner) {
   if (IsWindow(gPreview.window)) {
+    ShowWindow(gPreview.window, SW_RESTORE);
     SetForegroundWindow(gPreview.window);
+    if (IsWindow(gPreview.search)) SetFocus(gPreview.search);
     return;
   }
   RECT parent{};
@@ -902,7 +904,19 @@ void OpenPreview(HWND owner) {
       WS_EX_APPWINDOW, kStartClass, L"NoyaPLANET 11to10 - Başlat menüsü önizlemesi",
       WS_OVERLAPPEDWINDOW | WS_VISIBLE,
       x, y, width, height, owner, nullptr, GetModuleHandleW(nullptr), nullptr);
-  if (preview) ShowWindow(preview, SW_SHOWNORMAL);
+  if (preview) {
+    ShowWindow(preview, SW_SHOWNORMAL);
+    SetForegroundWindow(preview);
+    if (IsWindow(gPreview.search)) SetFocus(gPreview.search);
+  }
+}
+
+void TogglePreview(HWND owner) {
+  if (IsWindow(gPreview.window)) {
+    DestroyWindow(gPreview.window);
+  } else {
+    OpenPreview(owner);
+  }
 }
 
 LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
@@ -1052,11 +1066,11 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       return reinterpret_cast<INT_PTR>(gBrush);
     }
     case noya::kRequestStartMenuPreview:
-      OpenPreview(hwnd);
+      TogglePreview(hwnd);
       return 0;
     case WM_HOTKEY:
       if (wParam == kStartHotkey) {
-        OpenPreview(hwnd);
+        TogglePreview(hwnd);
         return 0;
       }
       return DefWindowProcW(hwnd, message, wParam, lParam);
@@ -1176,6 +1190,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
         SetWindowTextW(gPreview.search, L"Dosya");
         uiControlsPresent =
             SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) >= 1;
+      }
+      if (uiControlsPresent) {
+        TogglePreview(window);  // same path as Ctrl+Alt+S / AppBar Start
+        uiControlsPresent = !IsWindow(gPreview.window);
+        if (uiControlsPresent) {
+          TogglePreview(window);
+          uiControlsPresent = IsWindow(gPreview.window) &&
+                              GetFocus() == gPreview.search;
+        }
       }
       if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
 
