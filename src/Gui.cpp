@@ -870,6 +870,7 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
     default:
       return DefWindowProcW(hwnd, message, wParam, lParam);
   }
+  return DefWindowProcW(hwnd, message, wParam, lParam);
 }
 
 bool FitPreviewToWorkArea(const RECT& work, int& x, int& y,
