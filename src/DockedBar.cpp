@@ -1,12 +1,16 @@
 #include "DockedBar.h"
 #include "TaskbarPreview.h"
 #include "ClassicCalendar.h"
+#include "PinManager.h"
+#include "StartMenuModel.h"
+#include "PackagedApps.h"
 
 #include <windows.h>
 #include <shellapi.h>
 
 #include <algorithm>
 #include <array>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -23,6 +27,11 @@ constexpr int kFirstWindow = 620;
 constexpr int kMaxWindows = 6;
 constexpr UINT kMenuRefresh = 1;
 constexpr UINT kMenuFirstWindow = 100;
+constexpr UINT kMenuFirstPin = 2000;
+constexpr UINT kMenuSound = 20;
+constexpr UINT kMenuNetwork = 21;
+constexpr UINT kMenuPower = 22;
+constexpr UINT kMenuWindowsSettings = 23;
 constexpr std::size_t kWindowsPerMenu = 30;
 constexpr std::size_t kMaxMenuWindows = 1020;  // 34 bounded pages.
 constexpr int kHeight = 44;
@@ -151,11 +160,90 @@ std::wstring EscapeMenuLabel(std::wstring_view title) {
   return escaped;
 }
 
+std::vector<std::wstring> PinnedForMenu() {
+  std::vector<std::wstring> pins;
+  bool configured = false;
+  std::wstring error;
+  if (!LoadPinnedTargets(pins, configured, error)) return {};
+  if (!configured) {
+    const auto& apps = BuiltInApps();
+    for (const std::size_t index : {0U, 4U, 1U, 3U}) {
+      if (index < apps.size()) pins.emplace_back(apps[index].command);
+    }
+  }
+  return pins;
+}
+
+std::wstring PinLabel(std::wstring_view target) {
+  for (const auto& app : BuiltInApps()) {
+    if (target == app.command) return std::wstring(app.title);
+  }
+  std::wstring label = std::filesystem::path(std::wstring(target)).stem().wstring();
+  if (label.empty()) label = std::wstring(target);
+  if (label.size() > 64) {
+    label.resize(63);
+    label += L"…";
+  }
+  return label;
+}
+
+bool OpenPin(HWND owner, const std::wstring& target) {
+  if (!IsValidPinnedTarget(target)) return false;
+  bool builtIn = false;
+  for (const auto& app : BuiltInApps()) {
+    if (target == app.command) { builtIn = true; break; }
+  }
+  if (!builtIn && CanResolveAppsFolderItem(target))
+    return LaunchAppsFolderItem(owner, target);
+  const HINSTANCE result = ShellExecuteW(owner, L"open", target.c_str(),
+                                         nullptr, nullptr, SW_SHOWNORMAL);
+  return reinterpret_cast<INT_PTR>(result) > 32;
+}
+
+const wchar_t* SystemSettingsUri(UINT command) {
+  switch (command) {
+    case kMenuSound: return L"ms-settings:sound";
+    case kMenuNetwork: return L"ms-settings:network-status";
+    case kMenuPower: return L"ms-settings:powersleep";
+    case kMenuWindowsSettings: return L"ms-settings:";
+    default: return nullptr;
+  }
+}
+
 void ShowAllWindowsMenu() {
   UpdateWindows();
   HMENU menu = CreatePopupMenu();
   if (!menu) return;
   AppendMenuW(menu, MF_STRING, kMenuRefresh, L"Pencere listesini yenile");
+
+  // Reuse the same four user-owned pins as the independent Start flyout.
+  // Read them on demand so pin/unpin changes appear next time this menu opens.
+  const std::vector<std::wstring> pinned = PinnedForMenu();
+  HMENU pins = CreatePopupMenu();
+  if (pins) {
+    if (pinned.empty()) {
+      AppendMenuW(pins, MF_STRING | MF_GRAYED, 0, L"Sabitlenmiş uygulama yok");
+    } else {
+      for (std::size_t i = 0; i < pinned.size(); ++i) {
+        const std::wstring label = EscapeMenuLabel(PinLabel(pinned[i]));
+        AppendMenuW(pins, MF_STRING, kMenuFirstPin + static_cast<UINT>(i),
+                    label.c_str());
+      }
+    }
+    if (!AppendMenuW(menu, MF_POPUP,
+                     reinterpret_cast<UINT_PTR>(pins), L"Sabitlenenler"))
+      DestroyMenu(pins);
+  }
+  HMENU system = CreatePopupMenu();
+  if (system) {
+    AppendMenuW(system, MF_STRING, kMenuSound, L"Ses ayarları");
+    AppendMenuW(system, MF_STRING, kMenuNetwork, L"Ağ ayarları");
+    AppendMenuW(system, MF_STRING, kMenuPower, L"Güç ayarları");
+    AppendMenuW(system, MF_STRING, kMenuWindowsSettings, L"Windows Ayarları");
+    if (!AppendMenuW(menu, MF_POPUP,
+                     reinterpret_cast<UINT_PTR>(system), L"Windows denetimleri"))
+      DestroyMenu(system);
+  }
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
 
   // A popup menu pumps a nested message loop: preserve the handle associated
@@ -198,6 +286,18 @@ void ShowAllWindowsMenu() {
   DestroyMenu(menu);
   if (choice == kMenuRefresh) {
     UpdateWindows();
+  } else if (choice >= kMenuFirstPin &&
+             choice < kMenuFirstPin + pinned.size()) {
+    const auto& target = pinned[static_cast<std::size_t>(choice - kMenuFirstPin)];
+    if (!OpenPin(dock.dashboard, target))
+      MessageBoxW(dock.dashboard, L"Sabitlenmiş uygulama açılamadı.",
+                  L"NoyaPLANET", MB_OK | MB_ICONWARNING);
+  } else if (const wchar_t* settings = SystemSettingsUri(choice)) {
+    const HINSTANCE result = ShellExecuteW(dock.dashboard, L"open", settings,
+                                           nullptr, nullptr, SW_SHOWNORMAL);
+    if (reinterpret_cast<INT_PTR>(result) <= 32)
+      MessageBoxW(dock.dashboard, L"Windows Ayarları açılamadı.",
+                  L"NoyaPLANET", MB_OK | MB_ICONWARNING);
   } else if (choice >= kMenuFirstWindow &&
              choice < kMenuFirstWindow + count) {
     const std::size_t index = static_cast<std::size_t>(choice - kMenuFirstWindow);
@@ -448,6 +548,9 @@ bool DockedBarLayoutSelfTest() {
          WindowMenuCommand(1019) == kMenuFirstWindow + 1019 &&
          WindowMenuCommand(1020) == 0 &&
          kMaxMenuWindows % kWindowsPerMenu == 0 &&
+         SystemSettingsUri(kMenuSound) != nullptr &&
+         SystemSettingsUri(0) == nullptr &&
+         PinLabel(L"notepad.exe") == L"Not Defteri" &&
          EscapeMenuLabel(L"Save & Exit") == L"Save && Exit" &&
          EscapeMenuLabel(L"") == L"";
 }
