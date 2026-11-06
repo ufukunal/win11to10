@@ -45,6 +45,16 @@ if(MSVC)
 endif()
 add_test(NAME WindowsAppsFolderEnumeration COMMAND PackagedAppsSmoke)
 
+# Task Scheduler inventory reads boot/logon definitions only, never edits jobs.
+add_executable(ScheduledStartupSmoke tests/ScheduledStartupSmoke.cpp src/ScheduledStartup.cpp)
+target_include_directories(ScheduledStartupSmoke PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_compile_definitions(ScheduledStartupSmoke PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_libraries(ScheduledStartupSmoke PRIVATE ole32 oleaut32 taskschd uuid)
+if(MSVC)
+  target_compile_options(ScheduledStartupSmoke PRIVATE /W4 /utf-8 /permissive-)
+endif()
+add_test(NAME ScheduledStartupReadOnly COMMAND ScheduledStartupSmoke)
+
 add_executable(StartMenuModelTests tests/StartMenuModelTests.cpp)
 target_link_libraries(StartMenuModelTests PRIVATE StartMenuModel)
 if(MSVC)
