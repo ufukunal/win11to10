@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include <array>
+#include <cstring>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -64,8 +65,8 @@ LoginLaunchState ReadEntry(HKEY key, std::wstring_view expected,
     error = L"Mevcut başlangıç kaydı çözümlenemedi; üzerine yazılmadı.";
     return LoginLaunchState::Conflict;
   }
-  const auto* chars = reinterpret_cast<const wchar_t*>(data.data());
-  const std::wstring value(chars, bytes / sizeof(wchar_t) - 1);
+  std::wstring value(bytes / sizeof(wchar_t) - 1, L'\0');
+  std::memcpy(value.data(), data.data(), value.size() * sizeof(wchar_t));
   if (value.find(L'\0') != std::wstring::npos ||
       !OurCommand(value, expected)) {
     error = L"Aynı adlı farklı bir başlangıç kaydı var; korunuyor.";
