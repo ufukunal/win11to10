@@ -953,6 +953,20 @@ void TogglePreview(HWND owner) {
   }
 }
 
+void CloseNoyaAppearanceWindows() {
+  // All of these are our own top-level windows; Windows' Explorer, taskbar
+  // and notification area remain untouched. Also used on normal exit.
+  noya::CloseDockedBar();
+  if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
+  for (const wchar_t* cls : {
+           L"NoyaPlanetClassicFileBrowserV1",
+           L"NoyaPlanetClassicCalendarV1",
+           L"NoyaPlanetTaskbarPreviewV1"}) {
+    const HWND other = FindWindowW(cls, nullptr);
+    if (IsWindow(other)) DestroyWindow(other);
+  }
+}
+
 LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
                                WPARAM wParam, LPARAM lParam) {
   if (gTaskbarCreatedMessage != 0 && message == gTaskbarCreatedMessage) {
@@ -1064,15 +1078,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
         case kDisableDockMenu: noya::CloseDockedBar(); return 0;
         case kRestoreNoyaViewMenu: {
           // Fail-safe visual rollback. No Explorer state was changed.
-          noya::CloseDockedBar();
-          if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
-          for (const wchar_t* cls : {
-                   L"NoyaPlanetClassicFileBrowserV1",
-                   L"NoyaPlanetClassicCalendarV1",
-                   L"NoyaPlanetTaskbarPreviewV1"}) {
-            HWND other = FindWindowW(cls, nullptr);
-            if (IsWindow(other)) DestroyWindow(other);
-          }
+          CloseNoyaAppearanceWindows();
           MessageBoxW(hwnd,
               L"NoyaPLANET'in ayrı görünüm pencereleri ve ek görev çubuğu "
               L"kapatıldı. Orijinal Windows Başlat, Explorer ve sistem tepsisi "
@@ -1171,8 +1177,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       }
       return DefWindowProcW(hwnd, message, wParam, lParam);
     case WM_CLOSE:
-      noya::CloseDockedBar();
-      if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
+      CloseNoyaAppearanceWindows();
       DestroyWindow(hwnd);
       return 0;
     case WM_DESTROY:
@@ -1337,8 +1342,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
           if (IsWindow(fromClock)) DestroyWindow(fromClock);
         }
       }
-      noya::CloseDockedBar();
-      uiControlsPresent = uiControlsPresent && !noya::IsDockedBarOpen();
+      CloseNoyaAppearanceWindows();
+      uiControlsPresent = uiControlsPresent &&
+          !noya::IsDockedBarOpen() && !IsWindow(gPreview.window) &&
+          !IsWindow(FindWindowW(L"NoyaPlanetClassicCalendarV1", nullptr));
     }
     PostMessageW(window, WM_CLOSE, 0, 0);
   } else {
