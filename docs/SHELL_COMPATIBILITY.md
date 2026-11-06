@@ -33,7 +33,11 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
   Choosing a menu item activates or restores that window; the existing
   taskbar buttons still toggle minimization for the foreground window.
   This overflow menu is not an application-grouping or thumbnail system.
-  Multi-monitor/DPI behavior and fullscreen application behavior need testing.
+  The AppBar computes its height, controls and fonts from its window DPI,
+  and renegotiates the reserved area when Windows signals a DPI change.
+  A DPI-unaware host may still report 96 DPI; this is not a claim of
+  per-monitor DPI v2 correctness. Multi-monitor DPI transitions and fullscreen
+  application behavior still require real-device testing.
   The bar never enables itself at Windows startup.
 - The optional AppBar clock is an accessible, keyboard-operable button which
   opens the existing app-owned native calendar near that clock, clamped to its
