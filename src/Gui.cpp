@@ -60,12 +60,14 @@ constexpr int kServiceInventoryMenu = 926;
 constexpr int kSaveBootBaselineMenu = 928;
 constexpr int kCompareBootsMenu = 929;
 constexpr int kLoginLaunchMenu = 930;
+constexpr int kRestoreNoyaViewMenu = 931;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
 constexpr int kPinSelected = 203;
 constexpr int kUnpinSelected = 204;
 constexpr int kRefreshInstalledApps = 205;
+constexpr int kCloseStart = 206;
 constexpr int kTileBase = 300;
 
 struct Dashboard {
@@ -104,6 +106,8 @@ struct StartPreview {
   HWND tilesLabel{};
   HWND tiles[4]{};
   HWND taskbarNote{};
+  HWND close{};
+  bool contextMenuOpen = false;
   std::vector<std::size_t> visible;
   std::vector<PreviewItem> allApps;
   std::vector<std::wstring> pinnedTargets;
@@ -354,6 +358,8 @@ HMENU BuildDashboardMenu() {
                 L"Ek görev çubuğunu yerleştir (deneysel)");
     AppendMenuW(appearance, MF_STRING, kDisableDockMenu,
                 L"Ek görev çubuğunu kaldır");
+    AppendMenuW(appearance, MF_STRING, kRestoreNoyaViewMenu,
+                L"NoyaPLANET pencerelerini kapat ve Windows görünümüne dön");
     AppendMenuW(appearance, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(appearance, MF_STRING, kClassicExplorerMenu,
                 L"Klasik dosya tarayıcısını aç");
@@ -654,7 +660,8 @@ void LayoutPreview(HWND hwnd) {
   const int listWidth = std::max(200, usable / 2 - 10);
   const int tileX = 28 + listWidth;
   const int tileWidth = std::max(170, usable - listWidth - 12);
-  Place(gPreview.title, 22, 14, usable, 43);
+  Place(gPreview.title, 22, 14, std::max(100, usable - 75), 43);
+  Place(gPreview.close, std::max(0, width - 93), 14, 70, 34);
   Place(gPreview.note, 23, 60, usable, 44);
   Place(gPreview.searchLabel, 22, 115, listWidth, 26);
   Place(gPreview.search, 22, 145, listWidth, 32);
@@ -680,12 +687,14 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
       gPreview.window = hwnd;
       gPreview.bodyFont = MakeFont(-18, false);
       gPreview.titleFont = MakeFont(-29, true);
-      gPreview.title = CreateLabel(hwnd, L"Başlat  |  Windows 10 önizlemesi",
+      gPreview.title = CreateLabel(hwnd, L"NoyaPLANET Başlat",
                                    gPreview.titleFont);
       gPreview.note = CreateLabel(
-          hwnd, L"Bu pencere gerçek Başlat menüsünün yerine geçmez.\r\n"
-                L"Arama ve uygulama başlatma davranışları çalışır.",
+          hwnd, L"Windows Başlat menüsü korunur. Uygulama seçin veya arayın.\r\n"
+                L"Esc, Kapat veya dışarı tıklayarak bu menüyü kapatın.",
           gPreview.bodyFont);
+      gPreview.close = CreateButton(hwnd, L"Kapat", kCloseStart,
+                                     gPreview.bodyFont);
       gPreview.searchLabel = CreateLabel(hwnd, L"Uygulama ara:", gPreview.bodyFont);
       gPreview.search = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
                          WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
@@ -756,6 +765,8 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
         ChangePinnedSelection(false);
       } else if (id == kRefreshInstalledApps && HIWORD(wParam) == BN_CLICKED) {
         RefreshStartIndex(true);
+      } else if (id == kCloseStart && HIWORD(wParam) == BN_CLICKED) {
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
       } else if (id >= kTileBase && id < kTileBase + 4 && HIWORD(wParam) == BN_CLICKED) {
         const auto pinnedIndex = static_cast<std::size_t>(id - kTileBase);
         if (pinnedIndex < gPreview.pinnedTargets.size()) {
@@ -816,9 +827,11 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
       AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
       AppendMenuW(menu, MF_STRING, 2, L"Başlat'a sabitle");
       AppendMenuW(menu, MF_STRING, 3, L"Sabitlemeyi kaldır");
+      gPreview.contextMenuOpen = true;
       const int chosen = TrackPopupMenu(menu,
           TPM_RETURNCMD | TPM_RIGHTBUTTON,
           at.x, at.y, 0, hwnd, nullptr);
+      gPreview.contextMenuOpen = false;
       DestroyMenu(menu);
       if (chosen == 1 &&
           static_cast<std::size_t>(selected) < gPreview.visible.size()) {
@@ -831,6 +844,18 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
       }
       return 0;
     }
+    case WM_ACTIVATE:
+      // Native Start-style flyout: dismiss on outside activation.
+      // Do not close while its own context menu pumps a nested message loop.
+      if (LOWORD(wParam) == WA_INACTIVE && !gPreview.contextMenuOpen)
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+      return 0;
+    case WM_KEYDOWN:
+      if (wParam == VK_ESCAPE) {
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+        return 0;
+      }
+      break;
     case WM_CTLCOLORSTATIC: {
       HDC dc = reinterpret_cast<HDC>(wParam);
       SetTextColor(dc, kForeground);
@@ -845,6 +870,7 @@ LRESULT CALLBACK PreviewProc(HWND hwnd, UINT message,
     default:
       return DefWindowProcW(hwnd, message, wParam, lParam);
   }
+  return DefWindowProcW(hwnd, message, wParam, lParam);
 }
 
 bool FitPreviewToWorkArea(const RECT& work, int& x, int& y,
@@ -901,12 +927,16 @@ void OpenPreview(HWND owner) {
   monitorInfo.cbSize = sizeof(monitorInfo);
   const HMONITOR monitor = MonitorFromWindow(anchor, MONITOR_DEFAULTTONEAREST);
   if (GetMonitorInfoW(monitor, &monitorInfo)) {
+    if (!noya::DockedBarWindow()) {
+      x = monitorInfo.rcWork.left + 8;
+      y = monitorInfo.rcWork.bottom - height - 8;
+    }
     if (!FitPreviewToWorkArea(monitorInfo.rcWork, x, y, width, height))
       return;
   }
   HWND preview = CreateWindowExW(
-      WS_EX_APPWINDOW, kStartClass, L"NoyaPLANET 11to10 - Başlat menüsü önizlemesi",
-      WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+      WS_EX_TOOLWINDOW, kStartClass, L"NoyaPLANET Başlat",
+      WS_POPUP | WS_BORDER | WS_VISIBLE,
       x, y, width, height, owner, nullptr, GetModuleHandleW(nullptr), nullptr);
   if (preview) {
     ShowWindow(preview, SW_SHOWNORMAL);
@@ -920,6 +950,20 @@ void TogglePreview(HWND owner) {
     DestroyWindow(gPreview.window);
   } else {
     OpenPreview(owner);
+  }
+}
+
+void CloseNoyaAppearanceWindows() {
+  // All of these are our own top-level windows; Windows' Explorer, taskbar
+  // and notification area remain untouched. Also used on normal exit.
+  noya::CloseDockedBar();
+  if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
+  for (const wchar_t* cls : {
+           L"NoyaPlanetClassicFileBrowserV1",
+           L"NoyaPlanetClassicCalendarV1",
+           L"NoyaPlanetTaskbarPreviewV1"}) {
+    const HWND other = FindWindowW(cls, nullptr);
+    if (IsWindow(other)) DestroyWindow(other);
   }
 }
 
@@ -1032,6 +1076,18 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
           }
           return 0;
         case kDisableDockMenu: noya::CloseDockedBar(); return 0;
+        case kRestoreNoyaViewMenu: {
+          // Fail-safe visual rollback. No Explorer state was changed.
+          CloseNoyaAppearanceWindows();
+          MessageBoxW(hwnd,
+              L"NoyaPLANET'in ayrı görünüm pencereleri ve ek görev çubuğu "
+              L"kapatıldı. Orijinal Windows Başlat, Explorer ve sistem tepsisi "
+              L"zaten korunuyordu.\r\n\r\n"
+              L"Uygulanmış görsel efektleri geri almak için kontrol "
+              L"panelindeki 'Orijinal ayarları geri yükle' düğmesini kullanın.",
+              L"Windows görünümüne dönüş", MB_OK | MB_ICONINFORMATION);
+          return 0;
+        }
         case kClassicExplorerMenu:
           noya::ShowClassicFileBrowser(hwnd); return 0;
         case kBootHistoryMenu: ShowBootHistoryReport(hwnd); return 0;
@@ -1121,8 +1177,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
       }
       return DefWindowProcW(hwnd, message, wParam, lParam);
     case WM_CLOSE:
-      noya::CloseDockedBar();
-      if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
+      CloseNoyaAppearanceWindows();
       DestroyWindow(hwnd);
       return 0;
     case WM_DESTROY:
@@ -1230,6 +1285,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
       // enumeration, Start controls, native file browser, and calendar.
       OpenPreview(window);
       uiControlsPresent = IsWindow(gPreview.window) &&
+          (GetWindowLongPtrW(gPreview.window, GWL_STYLE) & WS_POPUP) != 0 &&
+          IsWindow(gPreview.close) &&
           IsWindow(gPreview.search) && IsWindow(gPreview.appList) &&
           SendMessageW(gPreview.appList, LB_GETCOUNT, 0, 0) >= 6;
       if (uiControlsPresent) {
@@ -1265,6 +1322,30 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
       uiControlsPresent = uiControlsPresent && IsWindow(taskbar) &&
           IsWindow(GetDlgItem(taskbar, 400));
       if (IsWindow(taskbar)) DestroyWindow(taskbar);
+
+      // Exercise the opt-in AppBar's real lifecycle when the CI desktop shell
+      // is available. Failure to register must leave no ghost appbar.
+      const bool barOpened = noya::OpenDockedBar(window);
+      if (barOpened) {
+        const HWND bar = noya::DockedBarWindow();
+        const HWND clock = GetDlgItem(bar, 613);
+        uiControlsPresent = uiControlsPresent &&
+            IsWindow(bar) && IsWindow(clock) &&
+            IsWindow(GetDlgItem(bar, 610)) &&
+            IsWindow(GetDlgItem(bar, 611)) &&
+            IsWindow(GetDlgItem(bar, 612));
+        if (uiControlsPresent) {
+          SendMessageW(bar, WM_COMMAND, MAKEWPARAM(613, BN_CLICKED),
+                       reinterpret_cast<LPARAM>(clock));
+          HWND fromClock = FindWindowW(L"NoyaPlanetClassicCalendarV1", nullptr);
+          uiControlsPresent = IsWindow(fromClock);
+          if (IsWindow(fromClock)) DestroyWindow(fromClock);
+        }
+      }
+      CloseNoyaAppearanceWindows();
+      uiControlsPresent = uiControlsPresent &&
+          !noya::IsDockedBarOpen() && !IsWindow(gPreview.window) &&
+          !IsWindow(FindWindowW(L"NoyaPlanetClassicCalendarV1", nullptr));
     }
     PostMessageW(window, WM_CLOSE, 0, 0);
   } else {

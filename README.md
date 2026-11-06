@@ -19,17 +19,26 @@ simgeleri ve sistem Dosya Gezgini Windows tarafından yönetilmeye devam eder.
 - **Geri alınabilir görsel efekt profili:** Kullanıcının onayıyla belirli
   animasyon, gölge ve geçiş efektlerini azaltır; yazı tipi kenar düzeltmesini
   açık tutar. İlk kullanıcı ayarları saklanır, geri yükleme vardır.
-- **Windows 10 tarzı Başlat önizlemesi:** Windows uygulamaları, klasik Başlat
-  kısayolları ve Microsoft Store'dan yüklenen uygulamalar için Windows
-  AppsFolder taraması. Uygulama yalnızca tıklama/Enter ile açılır. Dört
+- **Windows 10 tarzı NoyaPLANET Başlat açılır menüsü:** Masaüstünde ayrı,
+  çerçevesiz bir açılır pencere olarak çalışır. Orijinal Windows Başlat'ın
+  yerini almaz; masaüstünün alt sol köşesine veya ek AppBar'ın üstüne açılır,
+  pencere dışına tıklayınca, Esc veya Kapat ile kapanır. Windows uygulamaları,
+  klasik Başlat kısayolları ve Microsoft Store'dan yüklenen uygulamalar için
+  Windows AppsFolder taraması. Uygulama yalnızca tıklama/Enter ile açılır. Dört
   kalıcı kutucuk, sağ tık menüsü, kullanıcı kontrollü liste yenileme.
   Türkçe büyük-küçük harf araması, Enter, aşağı ok ve Escape desteği.
-  Ctrl+Alt+S kısayolu program açıkken kullanılabiliyorsa Başlat'ı gösterir.
+  Ctrl+Alt+S kısayolu program açıkken kullanılabiliyorsa NoyaPLANET
+  menüsünü açıp kapatır.
   Arama dizini yeniden tarama yapılana kadar bellekte önbelleğe alınır.
 - **İsteğe bağlı ek görev çubuğu:** Windows Shell AppBar API ile ayrı bir
-  ekran alanı ayırır. Başlat önizlemesi, açık pencereler ve saat gösterilir.
-  Kullanıcı onayıyla açılır ve kaldırıldığında alanı serbest bırakır.
+  ekran alanı ayırır. NoyaPLANET Başlat menüsü, açık pencere düğmeleri, saat
+  ve yerel takvime erişim gösterilir. Tümü menüsünden 30'lu sayfalara ayrılan
+  açık pencereler, Başlat'taki aynı dört sabitleme ve Windows ses/ağ/güç
+  ayarlarına geçişler sunulur. Kullanıcı onayıyla açılır ve kaldırıldığında
+  ekran alanını serbest bırakır.
   **Orijinal Windows görev çubuğu gizlenmez veya değiştirilmez.**
+  Görünüm menüsündeki kurtarma komutu tüm NoyaPLANET önizlemelerini ve
+  ek çubuğu kapatır. Performans ayarlarının geri alınması ayrı onay gerektirir.
 - **Sistem tepsisi ve takvim:** NoyaPLANET'in yalnızca kendi simgesi,
   ayrı klasik takvim ve pencere önizlemesi. Diğer uygulamaların tepsi
   simgeleri ele geçirilmez.
@@ -58,7 +67,10 @@ Defender, Smart App Control ve Windows Update kapatılmaz.
 GitHub Actions, programı Windows Server 2022 **x64** ve gerçek Windows 11
 Enterprise **ARM64** ortamında MSVC/CMake ile derler. Otomatik testler C++,
 modern AppsFolder hedef çözümlemesi, geçici HKCU kayıtlarının geri yüklenmesi,
-servis envanteri ve Win32 arayüz pencerelerinin açılıp kapatılmasını kapsar.
+servis envanteri, Win32 arayüz pencereleri ve AppBar kaydı uygun bir
+masaüstü kabuğunda mümkünse AppBar açma/takvim/kapatma yaşam döngüsünü kapsar.
+AppBar kaydı bulunmayan CI oturumunda yalnızca güvenli başarısızlık yolu
+doğrulanır; bu test gerçek Windows masaüstü davranışını kanıtlamaz.
 
 Bunlar **Windows 11 x64 masaüstü testi**, çoklu monitör/erişilebilirlik testi,
 performans kazanımı kanıtı ya da Microsoft Store onayı değildir.
