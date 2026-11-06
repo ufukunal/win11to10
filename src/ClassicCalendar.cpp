@@ -79,7 +79,37 @@ LRESULT CALLBACK CalendarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 }  // namespace
 
-void ShowClassicCalendar(HWND parent) {
+bool FitCalendar(RECT work, RECT reference, int width, int height,
+                 int& x, int& y) {
+  const int workWidth = work.right - work.left;
+  const int workHeight = work.bottom - work.top;
+  if (workWidth <= 0 || workHeight <= 0 || width <= 0 || height <= 0)
+    return false;
+  // Place above the app-owned taskbar clock, never outside its monitor.
+  x = std::clamp(static_cast<int>(reference.right) - width,
+                 static_cast<int>(work.left),
+                 std::max(static_cast<int>(work.left),
+                          static_cast<int>(work.right) - width));
+  y = std::clamp(static_cast<int>(reference.top) - height,
+                 static_cast<int>(work.top),
+                 std::max(static_cast<int>(work.top),
+                          static_cast<int>(work.bottom) - height));
+  return true;
+}
+
+bool ClassicCalendarPlacementSelfTest() {
+  int x{}, y{};
+  if (!FitCalendar(RECT{-1920, -1080, 0, 0},
+                   RECT{-220, -44, -100, 0}, 336, 405, x, y) ||
+      x != -436 || y != -449) return false;
+  if (!FitCalendar(RECT{0, 0, 320, 240},
+                   RECT{230, 200, 310, 240}, 336, 405, x, y) ||
+      x != 0 || y != 0) return false;
+  return !FitCalendar(RECT{0, 0, 0, 0},
+                      RECT{0, 0, 0, 0}, 336, 405, x, y);
+}
+
+void ShowClassicCalendarAt(HWND parent, HWND anchor) {
   if (IsWindow(calendarWindow)) {
     ShowWindow(calendarWindow, SW_SHOW);
     SetForegroundWindow(calendarWindow);
@@ -103,14 +133,25 @@ void ShowClassicCalendar(HWND parent) {
 
   const int width = 336;
   const int height = 405;
-  const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-  const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-  const int x = std::max(0, screenWidth - width - 32);
-  const int y = std::max(0, screenHeight - height - 80);
+  HWND referenceWindow = IsWindow(anchor) ? anchor : parent;
+  MONITORINFO monitorInfo{};
+  monitorInfo.cbSize = sizeof(monitorInfo);
+  const HMONITOR monitor = MonitorFromWindow(referenceWindow,
+                                             MONITOR_DEFAULTTOPRIMARY);
+  if (!GetMonitorInfoW(monitor, &monitorInfo)) return;
+  RECT reference{};
+  if (!GetWindowRect(referenceWindow, &reference)) return;
+  int x{}, y{};
+  if (!FitCalendar(monitorInfo.rcWork, reference, width, height, x, y))
+    return;
   HWND created = CreateWindowExW(WS_EX_TOOLWINDOW, kCalendarClass,
       L"NoyaPLANET | Klasik Takvim", WS_OVERLAPPED | WS_CAPTION |
       WS_SYSMENU | WS_VISIBLE, x, y, width, height,
       parent, nullptr, instance, nullptr);
   if (created) ShowWindow(created, SW_SHOWNORMAL);
+}
+
+void ShowClassicCalendar(HWND parent) {
+  ShowClassicCalendarAt(parent, parent);
 }
 }  // namespace noya
