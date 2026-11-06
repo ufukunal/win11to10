@@ -26,6 +26,11 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
   Explorer restarts attempt to re-register; a failure closes it safely.
   This is a documented desktop toolbar, **not** an implementation of the
   real Windows taskbar and not a replacement for the notification area.
+  The "Tümü" button opens a native menu of visible application windows;
+  it lists up to 100 windows and reports when that limit is reached.
+  Choosing a menu item activates or restores that window; the existing
+  taskbar buttons still toggle minimization for the foreground window.
+  This overflow menu is not an application-grouping or thumbnail system.
   Multi-monitor/DPI behavior and fullscreen application behavior need testing.
   The bar never enables itself at Windows startup.
 - The NoyaPLANET tray icon also opens an app-owned native calendar popup.
