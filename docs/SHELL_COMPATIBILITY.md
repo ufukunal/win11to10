@@ -26,8 +26,10 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
   Explorer restarts attempt to re-register; a failure closes it safely.
   This is a documented desktop toolbar, **not** an implementation of the
   real Windows taskbar and not a replacement for the notification area.
-  The "Tümü" button opens a native menu of visible application windows;
-  it lists up to 100 windows and reports when that limit is reached.
+  The "Tümü" button opens a native keyboard-navigable menu of visible
+  application windows, grouped into submenus of 30 entries (up to 1020).
+  The menu reports when its safety limit is reached and preserves the
+  selected handle while the menu is open, even if window enumeration refreshes.
   Choosing a menu item activates or restores that window; the existing
   taskbar buttons still toggle minimization for the foreground window.
   This overflow menu is not an application-grouping or thumbnail system.
