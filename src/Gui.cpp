@@ -1075,7 +1075,7 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
           MessageBoxW(hwnd,
               L"NoyaPLANET'in ayrı görünüm pencereleri ve ek görev çubuğu "
               L"kapatıldı. Orijinal Windows Başlat, Explorer ve sistem tepsisi "
-              L"zaten korunuyordu.\\r\\n\\r\\n"
+              L"zaten korunuyordu.\r\n\r\n"
               L"Uygulanmış görsel efektleri geri almak için kontrol "
               L"panelindeki 'Orijinal ayarları geri yükle' düğmesini kullanın.",
               L"Windows görünümüne dönüş", MB_OK | MB_ICONINFORMATION);
