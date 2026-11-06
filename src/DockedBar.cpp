@@ -135,14 +135,17 @@ void ShowAllWindowsMenu() {
   if (!menu) return;
   AppendMenuW(menu, MF_STRING, kMenuRefresh, L"Pencere listesini yenile");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  const std::size_t count = std::min(dock.listed.size(), kMaxMenuWindows);
+  // TrackPopupMenu runs a nested message loop. A clock refresh can re-enumerate
+  // dock.listed while the menu is open, so keep the command-to-window map stable.
+  const std::vector<HWND> menuWindows = dock.listed;
+  const std::size_t count = std::min(menuWindows.size(), kMaxMenuWindows);
   for (std::size_t i = 0; i < count; ++i) {
-    const std::wstring label = MenuTitle(dock.listed[i]);
+    const std::wstring label = MenuTitle(menuWindows[i]);
     const UINT id = WindowMenuCommand(i);
     if (!label.empty() && id != 0)
       AppendMenuW(menu, MF_STRING, id, label.c_str());
   }
-  if (dock.listed.size() > count) {
+  if (menuWindows.size() > count) {
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING | MF_GRAYED, 0,
                 L"İlk 100 pencere gösteriliyor");
@@ -158,8 +161,8 @@ void ShowAllWindowsMenu() {
   } else if (choice >= kMenuFirstWindow &&
              choice < kMenuFirstWindow + count) {
     const auto index = static_cast<std::size_t>(choice - kMenuFirstWindow);
-    if (index < dock.listed.size()) {
-      HWND chosen = dock.listed[index];
+    if (index < menuWindows.size()) {
+      HWND chosen = menuWindows[index];
       if (IsWindow(chosen)) {
         if (IsIconic(chosen)) ShowWindow(chosen, SW_RESTORE);
         SetForegroundWindow(chosen);
