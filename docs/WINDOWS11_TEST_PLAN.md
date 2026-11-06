@@ -24,7 +24,14 @@ real-world system tray/Explorer/monitor behaviors.
       folders without changing registry values or shortcut files.
 - [ ] NoyaPLANET tray menu opens separate native calendar; original Windows
       clock, calendar, flyouts and third-party tray icons still work.
-- [ ] Ctrl+Alt+S opens Start preview while dashboard is running, if available.
+- [ ] Ctrl+Alt+S opens the NoyaPLANET Start flyout while the dashboard runs.
+      Pressing it again closes the flyout; the Windows key still opens the
+      untouched original Windows Start menu.
+- [ ] With the additional AppBar disabled, the NoyaPLANET flyout anchors
+      above the current monitor's working-area bottom-left corner.
+- [ ] The native flyout has no extra taskbar button, focuses search on opening,
+      closes when another application gains activation and via Kapat/Escape.
+      The Windows Start button, native flyouts and taskbar remain operational.
 - [ ] Start menu enumerates per-user/common Start Menu links without crashing.
 - [ ] Search matches a shortcut in a nested Start Menu folder.
 - [ ] Microsoft Store'dan yüklenmiş bir uygulama AppsFolder taramasıyla
@@ -59,14 +66,29 @@ real-world system tray/Explorer/monitor behaviors.
 - [ ] Docked bar reserves an additional strip without covering the actual
       taskbar, taskbar flyouts or other docked appbars.
 - [ ] Docked Start opens the preview positioned above the additional bar.
-- [ ] Clicking docked window buttons activates the selected app; refresh is
-      user-triggered, not a continuously running enumeration timer.
+- [ ] Clicking docked window buttons activates the selected app; its visible
+      window list updates periodically (30 seconds) and on explicit refresh.
+- [ ] The docked Tümü menu exposes up to 1020 windows in 30-item pages,
+      preserves command mappings while a menu is open and properly escapes
+      ampersands in application titles.
+- [ ] The docked Tümü menu shows four user-configured Start pins (or defaults
+      before the first pin configuration). Pin/unpin changes are reflected the
+      next time the menu opens; every launch requires an explicit click.
+- [ ] The Windows denetimleri menu opens the built-in Windows sound, network,
+      power and Settings pages without replacing actual volume/network flyouts.
+- [ ] The Windows 10 görünümü recovery menu closes NoyaPLANET's optional
+      AppBar, Start flyout, native file browser, calendar and taskbar preview.
+      Original Windows taskbar/tray/Explorer remain available afterward.
 - [ ] Docked Kapat and menu removal release screen space immediately.
 - [ ] Restart Explorer: the bar either re-registers or closes safely.
 - [ ] Launch and close exclusive/fullscreen apps and check z-order recovery.
 - [ ] Move dashboard between primary and secondary monitors before docking;
       check usable desktop space and no overlap at 100% and 150% DPI.
 - [ ] Closing the dashboard always unregisters and removes the optional bar.
+- [ ] When ABM_NEW is unavailable, the optional AppBar fails closed and
+      reserves no screen area. On a disposable Windows desktop, verify the
+      appbar opens, its clock launches the local calendar and ABM_REMOVE
+      releases the reserved work area on close.
 - [ ] Original taskbar, clock, tray icons, context menus and Explorer remain
       operational throughout; no injected code or shell replacement.
 - [ ] Closing the dashboard exits the process and releases any hotkeys.
