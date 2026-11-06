@@ -139,19 +139,19 @@ bool Position() {
   data.uEdge = ABE_BOTTOM;
   data.rc = monitorInfo.rcMonitor;
   data.rc.top = data.rc.bottom - kHeight;
-  SHAppBarMessage(ABM_QUERYPOS, &data);
+  if (!SHAppBarMessage(ABM_QUERYPOS, &data)) return false;
   data.rc.top = data.rc.bottom - kHeight;
-  SHAppBarMessage(ABM_SETPOS, &data);
-  SetWindowPos(dock.hwnd, HWND_TOPMOST,
+  if (!SHAppBarMessage(ABM_SETPOS, &data)) return false;
+  return SetWindowPos(dock.hwnd, HWND_TOPMOST,
                data.rc.left, data.rc.top,
                data.rc.right-data.rc.left, data.rc.bottom-data.rc.top,
-               SWP_NOACTIVATE | SWP_SHOWWINDOW);
-  return true;
+               SWP_NOACTIVATE | SWP_SHOWWINDOW) != FALSE;
 }
 
 LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
   if (message == kAppBarNotify) {
-    if (wParam == ABN_POSCHANGED) Position();
+    if (wParam == ABN_POSCHANGED && !Position())
+      PostMessageW(hwnd, WM_CLOSE, 0, 0);
     else if (wParam == ABN_FULLSCREENAPP) {
       SetWindowPos(hwnd, lParam ? HWND_BOTTOM : HWND_TOPMOST,
                    0, 0, 0, 0,
@@ -182,7 +182,7 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       data.uCallbackMessage = kAppBarNotify;
       dock.registered = SHAppBarMessage(ABM_NEW, &data) != 0;
       if (!dock.registered) return -1;
-      Position();
+      if (!Position()) return -1;
       UpdateClock();
       UpdateWindows();
       SetTimer(hwnd, 1, 30000, nullptr); // keep clock and open-window buttons current
@@ -190,6 +190,14 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     case WM_SIZE:
       PlaceChildren();
+      return 0;
+    case WM_MOUSEACTIVATE:
+      // Keep the application window in front when a taskbar button is clicked.
+      // Otherwise the dock steals foreground focus before WM_COMMAND arrives.
+      return MA_NOACTIVATE;
+    case WM_DISPLAYCHANGE:
+      // Monitor topology can change after docking. Release the appbar on failure.
+      if (!Position()) PostMessageW(hwnd, WM_CLOSE, 0, 0);
       return 0;
     case WM_ACTIVATE: {
       auto data = Data(hwnd);
