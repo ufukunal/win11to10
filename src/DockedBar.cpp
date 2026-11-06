@@ -30,6 +30,7 @@ struct Dock {
   HWND clock{};
   std::array<HWND, kMaxWindows> apps{};
   std::vector<HWND> listed;
+  int visibleSlots{};
   HFONT font{};
   HBRUSH background{};
   bool registered = false;
@@ -86,7 +87,7 @@ void UpdateWindows() {
   EnumWindows(Collect, reinterpret_cast<LPARAM>(&dock.listed));
   for (int i = 0; i < kMaxWindows; ++i) {
     const auto index = static_cast<std::size_t>(i);
-    if (index >= dock.listed.size()) {
+    if (i >= dock.visibleSlots || index >= dock.listed.size()) {
       ShowWindow(dock.apps[index], SW_HIDE);
     } else {
       const auto text = Title(dock.listed[index]);
@@ -106,11 +107,21 @@ void UpdateClock() {
   SetWindowTextW(dock.clock, value);
 }
 
+int VisibleAppButtons(int width) {
+  constexpr int kLeft = 170;
+  constexpr int kRightControls = 119 + 60 + 16;
+  constexpr int kGap = 4;
+  constexpr int kMinButtonWidth = 64;
+  const int available = std::max(0, width - kRightControls - kLeft);
+  return std::clamp((available + kGap) / (kMinButtonWidth + kGap),
+                    0, kMaxWindows);
+}
+
 void PlaceChildren() {
   if (!IsWindow(dock.hwnd)) return;
   RECT rect{};
   GetClientRect(dock.hwnd, &rect);
-  const int width = std::max(static_cast<int>(rect.right), 360);
+  const int width = static_cast<int>(rect.right);
   const int margin = 6;
   MoveWindow(dock.start, margin, 5, 88, 34, TRUE);
   MoveWindow(dock.refresh, 100, 5, 64, 34, TRUE);
@@ -118,12 +129,19 @@ void PlaceChildren() {
   const int closeWidth = 60;
   const int left = 170;
   const int rightLimit = width - clockWidth - closeWidth - 16;
-  const int space = std::max(120, rightLimit - left);
+  const int space = std::max(0, rightLimit - left);
   const int gap = 4;
-  const int buttonWidth = std::max(32, (space - (kMaxWindows - 1)*gap) / kMaxWindows);
+  dock.visibleSlots = VisibleAppButtons(width);
+  const int buttonWidth = dock.visibleSlots > 0 ?
+      (space - (dock.visibleSlots - 1) * gap) / dock.visibleSlots : 0;
   for (int i = 0; i < kMaxWindows; ++i) {
-    MoveWindow(dock.apps[static_cast<std::size_t>(i)],
-        left + i*(buttonWidth + gap), 5, buttonWidth, 34, TRUE);
+    HWND button = dock.apps[static_cast<std::size_t>(i)];
+    if (i >= dock.visibleSlots) {
+      ShowWindow(button, SW_HIDE);
+    } else {
+      MoveWindow(button, left + i * (buttonWidth + gap), 5,
+                 buttonWidth, 34, TRUE);
+    }
   }
   MoveWindow(dock.clock, width - clockWidth - closeWidth - 12, 5,
              clockWidth, 34, TRUE);
@@ -202,6 +220,7 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     case WM_SIZE:
       PlaceChildren();
+      UpdateWindows();
       return 0;
     case WM_MOUSEACTIVATE:
       // Keep the application window in front when a taskbar button is clicked.
@@ -275,6 +294,12 @@ LRESULT CALLBACK DockProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
   return DefWindowProcW(hwnd, message, wParam, lParam);
 }
 }  // namespace
+
+bool DockedBarLayoutSelfTest() {
+  return VisibleAppButtons(360) == 0 &&
+         VisibleAppButtons(500) == 2 &&
+         VisibleAppButtons(800) == 6;
+}
 
 bool OpenDockedBar(HWND dashboard) {
   if (IsWindow(dock.hwnd)) {
