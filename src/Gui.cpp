@@ -60,6 +60,7 @@ constexpr int kServiceInventoryMenu = 926;
 constexpr int kSaveBootBaselineMenu = 928;
 constexpr int kCompareBootsMenu = 929;
 constexpr int kLoginLaunchMenu = 930;
+constexpr int kRestoreNoyaViewMenu = 931;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
@@ -357,6 +358,8 @@ HMENU BuildDashboardMenu() {
                 L"Ek görev çubuğunu yerleştir (deneysel)");
     AppendMenuW(appearance, MF_STRING, kDisableDockMenu,
                 L"Ek görev çubuğunu kaldır");
+    AppendMenuW(appearance, MF_STRING, kRestoreNoyaViewMenu,
+                L"NoyaPLANET pencerelerini kapat ve Windows görünümüne dön");
     AppendMenuW(appearance, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(appearance, MF_STRING, kClassicExplorerMenu,
                 L"Klasik dosya tarayıcısını aç");
@@ -1058,6 +1061,26 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
           }
           return 0;
         case kDisableDockMenu: noya::CloseDockedBar(); return 0;
+        case kRestoreNoyaViewMenu: {
+          // Fail-safe visual rollback. No Explorer state was changed.
+          noya::CloseDockedBar();
+          if (IsWindow(gPreview.window)) DestroyWindow(gPreview.window);
+          for (const wchar_t* cls : {
+                   L"NoyaPlanetClassicFileBrowserV1",
+                   L"NoyaPlanetClassicCalendarV1",
+                   L"NoyaPlanetTaskbarPreviewV1"}) {
+            HWND other = FindWindowW(cls, nullptr);
+            if (IsWindow(other)) DestroyWindow(other);
+          }
+          MessageBoxW(hwnd,
+              L"NoyaPLANET'in ayrı görünüm pencereleri ve ek görev çubuğu "
+              L"kapatıldı. Orijinal Windows Başlat, Explorer ve sistem tepsisi "
+              L"zaten korunuyordu.\\r\\n\\r\\n"
+              L"Uygulanmış görsel efektleri geri almak için kontrol "
+              L"panelindeki 'Orijinal ayarları geri yükle' düğmesini kullanın.",
+              L"Windows görünümüne dönüş", MB_OK | MB_ICONINFORMATION);
+          return 0;
+        }
         case kClassicExplorerMenu:
           noya::ShowClassicFileBrowser(hwnd); return 0;
         case kBootHistoryMenu: ShowBootHistoryReport(hwnd); return 0;
@@ -1293,6 +1316,28 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
       uiControlsPresent = uiControlsPresent && IsWindow(taskbar) &&
           IsWindow(GetDlgItem(taskbar, 400));
       if (IsWindow(taskbar)) DestroyWindow(taskbar);
+
+      // Exercise the opt-in AppBar's real lifecycle when the CI desktop shell
+      // is available. Failure to register must leave no ghost appbar.
+      const bool barOpened = noya::OpenDockedBar(window);
+      if (barOpened) {
+        const HWND bar = noya::DockedBarWindow();
+        const HWND clock = GetDlgItem(bar, 613);
+        uiControlsPresent = uiControlsPresent &&
+            IsWindow(bar) && IsWindow(clock) &&
+            IsWindow(GetDlgItem(bar, 610)) &&
+            IsWindow(GetDlgItem(bar, 611)) &&
+            IsWindow(GetDlgItem(bar, 612));
+        if (uiControlsPresent) {
+          SendMessageW(bar, WM_COMMAND, MAKEWPARAM(613, BN_CLICKED),
+                       reinterpret_cast<LPARAM>(clock));
+          HWND fromClock = FindWindowW(L"NoyaPlanetClassicCalendarV1", nullptr);
+          uiControlsPresent = IsWindow(fromClock);
+          if (IsWindow(fromClock)) DestroyWindow(fromClock);
+        }
+      }
+      noya::CloseDockedBar();
+      uiControlsPresent = uiControlsPresent && !noya::IsDockedBarOpen();
     }
     PostMessageW(window, WM_CLOSE, 0, 0);
   } else {
