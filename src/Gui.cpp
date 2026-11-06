@@ -4,6 +4,7 @@
 #include "ClassicFileBrowser.h"
 #include "StartupWindow.h"
 #include "StartupManager.h"
+#include "LoginLaunch.h"
 #include "InstalledApps.h"
 #include "PackagedApps.h"
 #include "TurkishSearch.h"
@@ -58,6 +59,7 @@ constexpr int kClassicExplorerMenu = 927;
 constexpr int kServiceInventoryMenu = 926;
 constexpr int kSaveBootBaselineMenu = 928;
 constexpr int kCompareBootsMenu = 929;
+constexpr int kLoginLaunchMenu = 930;
 bool gStartHotkey = false;
 constexpr int kSearch = 201;
 constexpr int kAppList = 202;
@@ -341,6 +343,8 @@ HMENU BuildDashboardMenu() {
   AppendMenuW(tools, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(tools, MF_STRING, kOpenWindowsStartupMenu,
               L"Windows başlangıç ayarları");
+  AppendMenuW(tools, MF_STRING, kLoginLaunchMenu,
+              L"NoyaPLANET'i oturum açılışında başlat");
   AppendMenuW(tools, MF_STRING, kOpenExplorerOptionsMenu,
               L"Dosya Gezgini seçenekleri");
   AppendMenuW(root, MF_POPUP, reinterpret_cast<UINT_PTR>(tools), L"Sistem araçları");
@@ -973,6 +977,19 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
     case WM_SIZE:
       LayoutDashboard(hwnd);
       return 0;
+    case WM_INITMENUPOPUP: {
+      std::wstring error;
+      const auto state = noya::InspectLoginLaunch(error);
+      HMENU menu = GetMenu(hwnd);
+      if (menu) {
+        CheckMenuItem(menu, kLoginLaunchMenu, MF_BYCOMMAND |
+            (state == noya::LoginLaunchState::Enabled ? MF_CHECKED : MF_UNCHECKED));
+        EnableMenuItem(menu, kLoginLaunchMenu, MF_BYCOMMAND |
+            (state == noya::LoginLaunchState::Error ||
+             state == noya::LoginLaunchState::Conflict ? MF_GRAYED : MF_ENABLED));
+      }
+      return 0;
+    }
     case WM_GETMINMAXINFO: {
       auto* data = reinterpret_cast<MINMAXINFO*>(lParam);
       data->ptMinTrackSize = POINT{690, 690};
@@ -1025,6 +1042,35 @@ LRESULT CALLBACK DashboardProc(HWND hwnd, UINT message,
         case kOpenWindowsStartupMenu:
           OpenBuiltIn(hwnd, L"ms-settings:startupapps");
           return 0;
+        case kLoginLaunchMenu: {
+          std::wstring error;
+          const auto state = noya::InspectLoginLaunch(error);
+          if (state == noya::LoginLaunchState::Conflict ||
+              state == noya::LoginLaunchState::Error) {
+            MessageBoxW(hwnd, error.c_str(), L"Oturum açılışında başlatma",
+                        MB_OK | MB_ICONWARNING);
+            return 0;
+          }
+          const bool enable = state == noya::LoginLaunchState::Disabled;
+          if (MessageBoxW(hwnd,
+              enable ? L"NoyaPLANET kontrol paneli bu kullanıcı oturum açtığında "
+                       L"otomatik başlatılsın mı? Windows'un kendi görev çubuğu "
+                       L"ve Başlat menüsü korunur."
+                     : L"NoyaPLANET'in bu kullanıcı için otomatik başlatma "
+                       L"kaydı kaldırılsın mı?",
+              L"Oturum açılışında başlatma",
+              MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES)
+            return 0;
+          if (!noya::SetLoginLaunch(enable, error)) {
+            MessageBoxW(hwnd, error.c_str(), L"Başlangıç kaydı değiştirilemedi",
+                        MB_OK | MB_ICONERROR);
+          } else {
+            MessageBoxW(hwnd, enable ? L"Otomatik başlatma etkinleştirildi."
+                                     : L"Otomatik başlatma kapatıldı.",
+                        L"NoyaPLANET", MB_OK | MB_ICONINFORMATION);
+          }
+          return 0;
+        }
         case kOpenExplorerOptionsMenu:
           ShellExecuteW(hwnd, L"open", L"control.exe",
                         L"folders", nullptr, SW_SHOWNORMAL);
@@ -1113,7 +1159,7 @@ bool RegisterWindowClass(HINSTANCE instance, const wchar_t* name,
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) {
   if (commandLine && std::wstring_view(commandLine) == L"--self-test") {
-    return PreviewPlacementSelfTest() && noya::DockedBarLayoutSelfTest() && noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::PackagedAppsModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::ScheduledStartupModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
+    return PreviewPlacementSelfTest() && noya::DockedBarLayoutSelfTest() && noya::LoginLaunchModelSelfTest() && noya::ModelSelfTest() && noya::StartupModelSelfTest() && noya::InstalledAppModelSelfTest() && noya::PackagedAppsModelSelfTest() && noya::BootMetricsModelSelfTest() && noya::BootHistoryModelSelfTest() && noya::BootComparisonModelSelfTest() && noya::StartupInventoryModelSelfTest() && noya::ScheduledStartupModelSelfTest() && noya::PinModelSelfTest() && noya::ServiceSummarySelfTest() && noya::ClassicFileBrowserModelSelfTest() ? 0 : 1;
   }
   // UI smoke test checks real window/control creation and normal teardown
   // without applying settings or opening other apps.
