@@ -13,10 +13,15 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
   only on explicit user interaction. The index is in-memory cached until an
   explicit refresh. Turkish-language search and Enter/Down/Escape are supported.
   The real Windows key and original Start integration remain untouched.
-- The on-demand Start preview searches installed Start Menu shortcuts and
-  launches selected applications. It supports four editable pinned tiles,
-  persisted in a per-user config file. It does not change real Start pins. Optional Ctrl+Alt+S works only while the
-  native dashboard is running. The Windows key and built-in Start menu remain.
+- The on-demand NoyaPLANET Start flyout opens as a separate borderless native
+  popup anchored above its own optional AppBar, or at the bottom-left of the
+  current monitor work area. It closes when focus moves to another application,
+  when Escape or its Close button is used, or after a launch attempt. It
+  searches installed Start Menu shortcuts and launches only selected items.
+  Four editable pinned tiles persist in a per-user config file; they do not
+  alter Windows' own Start pins. Ctrl+Alt+S and the opt-in AppBar Start button
+  toggle the flyout while the native dashboard is running. The Windows key
+  and Windows' built-in Start menu remain unmodified.
 - The taskbar preview enumerates visible windows and opens selected windows,
   displaying a clock. It does not replace or auto-hide Windows' own taskbar.
 - An additional optional docked Win32 **AppBar** can be enabled from the
@@ -32,13 +37,21 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
   selected handle while the menu is open, even if window enumeration refreshes.
   Choosing a menu item activates or restores that window; the existing
   taskbar buttons still toggle minimization for the foreground window.
-  This overflow menu is not an application-grouping or thumbnail system.
+  The overflow menu also exposes the four NoyaPLANET Start pins
+  (loaded on demand) and explicit shortcuts to Windows sound, network, power
+  and Settings pages. These open Windows' supported settings URIs rather than
+  impersonating or intercepting original system flyouts. This overflow menu
+  is not an application-grouping or thumbnail system.
   The AppBar computes its height, controls and fonts from its window DPI,
   and renegotiates the reserved area when Windows signals a DPI change.
   A DPI-unaware host may still report 96 DPI; this is not a claim of
   per-monitor DPI v2 correctness. Multi-monitor DPI transitions and fullscreen
   application behavior still require real-device testing.
-  The bar never enables itself at Windows startup.
+  The bar never enables itself at Windows startup. The dashboard's
+  "Windows 10 görünümü" menu provides a visual recovery action that closes
+  its extra AppBar, Start flyout, taskbar preview, calendar and file browser;
+  it does not silently change startup entries or undo independently applied
+  visual effects. Windows' original shell was never replaced.
 - The optional AppBar clock is an accessible, keyboard-operable button which
   opens the existing app-owned native calendar near that clock, clamped to its
   monitor work area. The NoyaPLANET tray icon can open the same calendar.
