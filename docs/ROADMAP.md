@@ -23,6 +23,8 @@ anımsatan bir masaüstü deneyimi. "Tam kabuk değişimi" ile "bağımsız
 
 - **v0.7 geliştirme güncellemesi:** HKCU/HKLM StartupApproved Run kayıtlarının salt okunur durumları ve bilinmeyen kayıt türleri için güvenli sınıflandırma testleri. Bu durum, gerçek açılışta çalışmayı garanti etmez.
 
+- **v0.7 ek geliştirme:** Görev Zamanlayıcı içindeki açılış/oturum açma tetikleyicili görevler Windows Task Scheduler COM API ile yalnızca okunur; değişiklik veya otomatik devre dışı bırakma yapılmaz. Yetki nedeniyle okunamayan görevler ve CI masaüstü sınırları ayrı değerlendirilir.
+
 ## Ürün tamamlandı denmeden önce
 
 1. **Gerçek kabuk entegrasyonu:** Windows'un orijinal Başlat/görev
