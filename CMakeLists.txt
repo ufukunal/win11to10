@@ -20,7 +20,7 @@ target_link_libraries(Win11To10 PRIVATE user32 advapi32)
 add_library(StartMenuModel STATIC src/StartMenuModel.cpp src/TurkishSearch.cpp)
 target_include_directories(StartMenuModel PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-add_executable(NoyaPLANET11to10 WIN32 src/Gui.cpp src/TaskbarPreview.cpp src/DockedBar.cpp src/ClassicFileBrowser.cpp src/StartupManager.cpp src/StartupWindow.cpp src/InstalledApps.cpp src/PackagedApps.cpp src/BootMetrics.cpp src/BootHistory.cpp src/BootComparison.cpp src/StartupInventory.cpp src/ScheduledStartup.cpp src/ServiceInventory.cpp src/PinManager.cpp src/ClassicCalendar.cpp src/TrayHost.cpp resources/AppVersion.rc)
+add_executable(NoyaPLANET11to10 WIN32 src/Gui.cpp src/TaskbarPreview.cpp src/DockedBar.cpp src/ClassicFileBrowser.cpp src/StartupManager.cpp src/LoginLaunch.cpp src/StartupWindow.cpp src/InstalledApps.cpp src/PackagedApps.cpp src/BootMetrics.cpp src/BootHistory.cpp src/BootComparison.cpp src/StartupInventory.cpp src/ScheduledStartup.cpp src/ServiceInventory.cpp src/PinManager.cpp src/ClassicCalendar.cpp src/TrayHost.cpp resources/AppVersion.rc)
 target_compile_definitions(NoyaPLANET11to10 PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
 target_link_libraries(NoyaPLANET11to10 PRIVATE StartMenuModel user32 gdi32 shell32 advapi32 wevtapi ole32 oleaut32 taskschd uuid comctl32)
 
@@ -66,6 +66,17 @@ add_test(NAME StartMenuSearch COMMAND StartMenuModelTests)
 # Windows runner and create/clean up harmless per-user HKCU Run entries.
 option(NOYAPLANET_ENABLE_HKCU_INTEGRATION_TESTS "Enable temporary HKCU startup integration tests" OFF)
 if(NOYAPLANET_ENABLE_HKCU_INTEGRATION_TESTS)
+  # Disposable GitHub Actions user profile only; never on a developer PC.
+  add_executable(LoginLaunchRoundTripTests tests/LoginLaunchRoundTripTests.cpp
+                 src/LoginLaunch.cpp)
+  target_include_directories(LoginLaunchRoundTripTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  target_compile_definitions(LoginLaunchRoundTripTests PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+  target_link_libraries(LoginLaunchRoundTripTests PRIVATE advapi32)
+  if(MSVC)
+    target_compile_options(LoginLaunchRoundTripTests PRIVATE /W4 /utf-8 /permissive-)
+  endif()
+  add_test(NAME LoginLaunchHKCURoundTrip COMMAND LoginLaunchRoundTripTests)
+
   add_executable(StartupRoundTripTests tests/StartupRoundTripTests.cpp src/StartupManager.cpp)
   target_include_directories(StartupRoundTripTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   target_compile_definitions(StartupRoundTripTests PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
