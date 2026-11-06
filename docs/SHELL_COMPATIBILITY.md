@@ -35,8 +35,10 @@ on supported Windows 11 builds, with low overhead and reliable rollback.
   This overflow menu is not an application-grouping or thumbnail system.
   Multi-monitor/DPI behavior and fullscreen application behavior need testing.
   The bar never enables itself at Windows startup.
-- The NoyaPLANET tray icon also opens an app-owned native calendar popup.
-  Neither the calendar nor its menu replaces Windows' original flyouts.
+- The optional AppBar clock is an accessible, keyboard-operable button which
+  opens the existing app-owned native calendar near that clock, clamped to its
+  monitor work area. The NoyaPLANET tray icon can open the same calendar.
+  Neither control replaces Windows' original clock or notification flyouts.
 - The NoyaPLANET tray icon is the application's own notification-area icon.
   It is added with Shell_NotifyIcon, and is removed on exit. Existing icons
   remain owned by Explorer. No programmatic migration of other apps' icons is
