@@ -66,6 +66,17 @@ add_test(NAME StartMenuSearch COMMAND StartMenuModelTests)
 # Windows runner and create/clean up harmless per-user HKCU Run entries.
 option(NOYAPLANET_ENABLE_HKCU_INTEGRATION_TESTS "Enable temporary HKCU startup integration tests" OFF)
 if(NOYAPLANET_ENABLE_HKCU_INTEGRATION_TESTS)
+  # Disposable GitHub Actions user profile only; never on a developer PC.
+  add_executable(LoginLaunchRoundTripTests tests/LoginLaunchRoundTripTests.cpp
+                 src/LoginLaunch.cpp)
+  target_include_directories(LoginLaunchRoundTripTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  target_compile_definitions(LoginLaunchRoundTripTests PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+  target_link_libraries(LoginLaunchRoundTripTests PRIVATE advapi32)
+  if(MSVC)
+    target_compile_options(LoginLaunchRoundTripTests PRIVATE /W4 /utf-8 /permissive-)
+  endif()
+  add_test(NAME LoginLaunchHKCURoundTrip COMMAND LoginLaunchRoundTripTests)
+
   add_executable(StartupRoundTripTests tests/StartupRoundTripTests.cpp src/StartupManager.cpp)
   target_include_directories(StartupRoundTripTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   target_compile_definitions(StartupRoundTripTests PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
